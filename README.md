@@ -24,6 +24,7 @@ And the best part: when Claude asks for permission or has a question, a **speech
 - **Answer permissions from the bubble** — when Claude Code asks for permission, the bubble shows what it wants to run and *Allow / Deny / Terminal* buttons. Your click answers the real prompt via the official `PermissionRequest` hook. Dangerous-looking commands (`rm`, `push --force`, `sudo`…) get a red border.
 - **Ask the user anything** — a local HTTP API lets Claude (or any script) ask multiple-choice or free-text questions through the bubble, with graceful fallback to the terminal.
 - **Multi-session scoreboard** — running several Claude Code sessions? The crab shows the highest-priority state across all of them, with white dots for parallel working sessions and a tooltip listing each project's status. Clicking the crab raises the window of the project that needs you (requires Accessibility permission).
+- **A brood of subagents** — when Claude Code spawns subagents, each one hatches as a baby crab in a strip below Craby: an egg cracks open with a *pop*, tiny legs drum away while the subagent runs, and when it finishes the little one retires with a cane for a couple of seconds and poofs into sparkles (*tink*). Failed or orphaned subagents poof in gray/red with a low *basso* thud — you can tell success from failure by ear alone. Up to 5 babies visible, session counts in Craby's tooltip ("· N 🐣"), reported by `GET /status`, powered by the official `SubagentStart`/`SubagentStop` hooks. As far as we know, no other coding-status pet turns your subagents into offspring.
 - **Sounds** — subtle *pling* on done, *ping* on attention. Toggle in the menu bar menu.
 - **He's alive** — his eyes follow your mouse around the screen, he has spontaneous idle quirks (a little wave, a side-step, blowing a bubble), a sweat drop when a task runs long, a nap when nothing happens, and a confetti celebration when he levels up. From level 3 he wears his rank on his head: hard hat → master's hat → crown. On first launch he introduces himself.
 - **Daily stats and levels** — the menu bar shows what happened today (tasks finished, projects, time worked), your day streak, and the last events — click one to jump to that project's window. Craby's level grows from *hatchling* to *legend* as tasks pile up, and the menu tells you when a new version is out.
@@ -71,6 +72,7 @@ Claude Code fires [hooks](https://code.claude.com/docs/en/hooks) on lifecycle ev
 |---|---|
 | `UserPromptSubmit` | starts typing on the laptop |
 | `PostToolUse` | heartbeat — keeps "working" alive (dead sessions go idle after 10 min without one) |
+| `SubagentStart` / `SubagentStop` | a baby crab hatches below Craby / retires with a cane and poofs |
 | `Stop` | celebrates (done) |
 | `Notification` | waves for attention |
 | `PermissionRequest` | opens the decision bubble and **waits for your click** |

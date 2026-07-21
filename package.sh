@@ -38,7 +38,7 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
     <key>CFBundleExecutable</key><string>pet</string>
     <key>CFBundleIconFile</key><string>crab</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.3.0</string>
+    <key>CFBundleShortVersionString</key><string>1.4.0</string>
     <key>LSUIElement</key><true/>
 </dict>
 </plist>

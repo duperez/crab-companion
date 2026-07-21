@@ -39,6 +39,7 @@
   .how{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;overflow-x:auto}
   .how pre{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--muted);line-height:1.9}
   .how pre b{color:var(--accent);font-weight:600}
+  .ts{color:var(--muted);font-size:12px;text-align:center;margin:6px 0 0}
   footer{padding:40px 0 56px;text-align:center;color:var(--muted);font-size:13px}
   footer a{color:var(--muted)}
 </style>
@@ -47,6 +48,8 @@
 
 <header class="wrap">
   <canvas id="crab" width="14" height="14" style="width:196px;height:196px"></canvas>
+  <canvas id="brood" width="23" height="6" style="width:184px;height:48px"></canvas>
+  <p class="ts">his brood — one baby per running subagent</p>
   <h1 class="px">CRABY</h1>
   <p class="tagline">A tiny pixel-art crab that lives on top of your Mac screen and tells you what Claude Code is up to — and lets you answer back without touching the terminal.</p>
   <div class="states" id="states">
@@ -79,6 +82,7 @@ cd crab-companion
     <div class="card"><h3>💬 Answer permissions from a bubble</h3><p>When Claude asks for permission, click Allow / Deny right under Craby. Dangerous commands get a red border. No answer? Falls back to the terminal — Craby never decides alone.</p></div>
     <div class="card"><h3>❓ Questions too</h3><p>Multiple-choice and free-text questions through the bubble, via a simple local HTTP API any script can use.</p></div>
     <div class="card"><h3>🗂️ Multi-session scoreboard</h3><p>Several sessions at once? Craby shows the highest-priority state, dots for parallel work, and a tooltip per project. Click to jump to the session that needs you.</p></div>
+    <div class="card"><h3>🐣 A brood of subagents</h3><p>Spawn subagents and watch baby crabs hatch from eggs below Craby — they scuttle while the subagent runs, retire with a tiny cane and vanish in a star poof (gray poof if it failed). No other coding pet does this.</p></div>
     <div class="card"><h3>📍 Menu bar twin</h3><p>A mini animated Craby in the menu bar, always in sync. Collapse the floating one when you need a clean screen.</p></div>
     <div class="card"><h3>🔔 Subtle sounds</h3><p>A soft pling when work finishes, a ping when Claude needs you. Toggle anytime from the menu bar.</p></div>
     <div class="card"><h3>📊 Daily stats &amp; levels</h3><p>Tasks finished, projects, time worked, recent events — and Craby levels up from hatchling to legend as work piles up.</p></div>
@@ -138,6 +142,40 @@ function setState(s){
 }
 document.querySelectorAll("#states button").forEach(b=>b.onclick=()=>setState(b.dataset.s));
 setState("working");
+
+// --- the brood: baby crab life cycle ---
+const babyEgg=["..WWW..",".WWWWW.",".WWWWW.","..WWW..",".......","......."];
+const babyEggCracking=["..WWW..",".WWBWW.",".WBWWW.","..WWW..",".......","......."];
+const babyAlive1=["R.....R",".RRRRR.",".RBRBR.",".RRRRR.",".R.R.R.","......."];
+const babyAlive2=[".R...R.",".RRRRR.",".RBRBR.",".RRRRR.","R.R.R.R","......."];
+const babyElderly=["R....GG",".RRRR.G",".RDRDRG",".RRRR.G",".R.R.R.","......."];
+const babyPoof1=[".W...W.","...Y...",".W...W.",".......",".......","......."];
+const babyPoof2=["W..Y..W",".......","Y.....Y","W..Y..W",".......","......."];
+const babyEmpty=[".......",".......",".......",".......",".......","......."];
+const errPoof=g=>g.map(r=>r.replaceAll("Y","R").replaceAll("W","D"));
+const CYCLE=24; // egg 2 + cracking 2 + alive 10 + elderly 5 + poof 1+1 + empty 3
+function babyFrame(t,err){
+  const p=((t%CYCLE)+CYCLE)%CYCLE;
+  if(p<2)return babyEgg;
+  if(p<4)return babyEggCracking;
+  if(p<14)return p%2?babyAlive2:babyAlive1;
+  if(p<19)return babyElderly;
+  if(p<20)return err?errPoof(babyPoof1):babyPoof1;
+  if(p<21)return err?errPoof(babyPoof2):babyPoof2;
+  return babyEmpty;
+}
+const bctx=document.getElementById("brood").getContext("2d");
+const babies=[{off:0,err:false},{off:9,err:true},{off:17,err:false}];
+let btick=0;
+function drawBrood(){
+  bctx.clearRect(0,0,23,6);
+  babies.forEach((b,i)=>{
+    const g=babyFrame(btick+b.off,b.err),x0=i*8;
+    g.forEach((row,y)=>[...row].forEach((ch,x)=>{if(PAL[ch]){bctx.fillStyle=PAL[ch];bctx.fillRect(x0+x,y,1,1)}}));
+  });
+}
+drawBrood();
+setInterval(()=>{btick++;drawBrood()},400);
 </script>
 </body>
 </html>

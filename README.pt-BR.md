@@ -24,6 +24,7 @@ E o melhor: quando o Claude pede permissão ou tem uma pergunta, um **balão de 
 - **Permissões pelo balão** — quando o Claude Code pede permissão, o balão mostra o que ele quer rodar com botões *Permitir / Negar / Terminal*. Seu clique responde o prompt de verdade, via o hook oficial `PermissionRequest`. Comandos perigosos (`rm`, `push --force`, `sudo`…) ganham borda vermelha.
 - **Perguntas pelo balão** — uma API HTTP local permite que o Claude (ou qualquer script) faça perguntas de múltipla escolha ou texto livre pelo balão, com fallback pro terminal.
 - **Placar multi-sessão** — várias sessões do Claude Code ao mesmo tempo? O caranguejo mostra o estado de maior prioridade entre todas, com pontinhos brancos para sessões trabalhando em paralelo e um tooltip listando o status de cada projeto. Clicar nele ergue a janela do projeto que precisa de você (requer permissão de Acessibilidade).
+- **Uma ninhada de subagentes** — quando o Claude Code dispara subagentes, cada um nasce como um mini-caranguejo numa faixa abaixo do Craby: um ovo racha com um *pop*, as patinhas tamborilam enquanto o subagente roda, e quando ele termina o filhote se aposenta de bengala por uns segundos e some num puf de estrelinhas (*tink*). Subagente que falha ou fica órfão dá um puf cinza/vermelho com um som grave (*basso*) — dá pra distinguir sucesso de falha só de ouvido. Até 5 filhotes visíveis, contagem por sessão no tooltip do Craby ("· N 🐣"), reportado no `GET /status`, alimentado pelos hooks oficiais `SubagentStart`/`SubagentStop`. Até onde sabemos, nenhum outro pet de status de código transforma seus subagentes em filhotes.
 - **Sons** — *plim* discreto no terminou, *ping* na atenção. Liga/desliga no menu da barra.
 - **Ele é vivo** — os olhos dele seguem seu mouse pela tela, ele tem manias espontâneas no ócio (um aceninho, um passinho de lado, uma bolhinha), gota de esforço quando a tarefa demora, soneca quando nada acontece e comemoração com confete quando sobe de nível. Do nível 3 em diante, exibe a patente na cabeça: capacete de obra → chapéu de mestre → coroa. No primeiro uso, ele se apresenta.
 - **Estatísticas e níveis** — o menu da barra mostra o dia (tarefas concluídas, projetos, tempo trabalhado), sua sequência de dias e os últimos eventos — clique num deles pra pular pra janela daquele projeto. O nível do Craby cresce de *filhote* a *lenda* conforme as tarefas acumulam, e o menu avisa quando sai versão nova.
@@ -71,6 +72,7 @@ O Claude Code dispara [hooks](https://code.claude.com/docs/en/hooks) em eventos 
 |---|---|
 | `UserPromptSubmit` | senta no laptop e digita |
 | `PostToolUse` | batimento cardíaco — mantém o "trabalhando" vivo (sessão morta vira ociosa após 10 min sem um) |
+| `SubagentStart` / `SubagentStop` | um filhote nasce abaixo do Craby / se aposenta de bengala e dá puf |
 | `Stop` | comemora (terminou) |
 | `Notification` | acena pedindo atenção |
 | `PermissionRequest` | abre o balão de decisão e **espera seu clique** |

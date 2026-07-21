@@ -80,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var lastEventAt = Date()
     var availableUpdate: String?
     var updateTimer: Timer?
-    let appVersion = "1.3.0"
+    let appVersion = "1.4.0"
 
     // ninhada de subagentes
     var babies: [Baby] = []
