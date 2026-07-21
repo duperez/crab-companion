@@ -23,19 +23,25 @@ Requisitos que podem faltar: `xcode-select --install` (swiftc), `brew install jq
 
 ## Arquitetura (1 minuto)
 
-- `main.swift` — o app inteiro (~700 linhas, sem dependências): janela flutuante borderless (todos os Spaces + fullscreen, `.accessory`), NSStatusItem animado, servidor HTTP em `localhost:4923` (NWListener), máquina de estados idle/working/done/attention com prioridade por sessão, balões de permissão/múltipla escolha/texto livre com long-poll.
+- `Sources/Sprites.swift` — pixel art (grades de strings 14x14, 1 char = 1 pixel, palette R/D/W/B/Y/G/L), estados idle/working/done/attention, carregamento de sprites customizados (`sprites.json`).
+- `Sources/HTTPServer.swift` — servidor em `localhost:4923` (NWListener). Endpoints `/answer/*` e `/quit` exigem token (`?token=` ou header `X-Craby-Token`; arquivo `~/Library/Application Support/Craby/token`).
+- `Sources/App.swift` — janela flutuante borderless (todos os Spaces + fullscreen, `.accessory`, arrastável com posição persistida), NSStatusItem animado com menu dinâmico (stats do dia, nível, eventos), balões de permissão/múltipla escolha/texto livre com long-poll e atalhos (1/2/3/Esc com o balão focado), multi-sessão com prioridade, sons, modo ausente via ntfy.
+- `Sources/Stats.swift` — estatísticas diárias, nível do Craby e registro de eventos (`stats.json`).
+- `Sources/L10n.swift` — strings EN/PT (segue o idioma do sistema).
 - `notify.sh` — chamado pelos hooks UserPromptSubmit/Stop/Notification; extrai `session_id` e `cwd` do stdin e faz GET `/{estado}?session=...&project=...`.
-- `ask.sh` — chamado pelo hook PermissionRequest; monta o balão via POST `/ask` e traduz a resposta em `permissionDecision` (formato: `hookSpecificOutput.decision.behavior` allow/deny + `additionalContext` no deny — NÃO use `permissionDecision`, esse é do PreToolUse).
-- `make_icon.swift` — gera o PNG do ícone a partir da pixel art.
-- Sprites são grades de strings 14x14 (1 char = 1 pixel; palette R/D/W/B/Y/G/L). Estados retornam arrays de quadros; animar = alternar grades.
+- `ask.sh` — chamado pelo hook PermissionRequest; monta o balão via POST `/ask` e traduz a resposta em decisão (formato: `hookSpecificOutput.decision.behavior` allow/deny + `additionalContext` no deny — NÃO use `permissionDecision`, esse é do PreToolUse).
+- `package.sh` monta `dist/Craby.app`; `setup.sh` (embarcado no bundle) registra LaunchAgent + hooks; `tools/main.swift` renderiza ícone e quadros do GIF de demo.
 
 ## Ciclo de desenvolvimento
 
 ```bash
-swiftc main.swift -o pet          # compilar
+swiftc Sources/*.swift -o pet     # compilar
 ./pet                             # rodar avulso (mate com clique direito no pet)
 curl localhost:4923/working       # testar estados: working|done|attention|idle
-curl localhost:4923/answer/allow  # responder balões programaticamente (allow|deny|ask|opt:N|txt:...)
+TOKEN=$(cat "$HOME/Library/Application Support/Craby/token")
+curl "localhost:4923/answer/allow?token=$TOKEN"  # responder balões (allow|deny|ask|opt:N|txt:...)
+swiftc Sources/Sprites.swift Sources/HTTPServer.swift Sources/L10n.swift \
+  Tests/main.swift -o run_tests && ./run_tests    # testes
 ./install.sh                      # publicar a mudança no app instalado (re-registra o LaunchAgent)
 ```
 

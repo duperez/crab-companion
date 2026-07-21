@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal binary
+        run: |
+          swiftc Sources/*.swift -o pet-arm64 -target arm64-apple-macos13
+          swiftc Sources/*.swift -o pet-x86_64 -target x86_64-apple-macos13
+          lipo -create pet-arm64 pet-x86_64 -output pet
+      - name: Package Craby.app
+        run: ./package.sh
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Craby.app.zip
+          generate_release_notes: true

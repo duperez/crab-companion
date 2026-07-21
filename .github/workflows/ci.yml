@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app
+        run: swiftc Sources/*.swift -o pet
+      - name: Build render tool
+        run: swiftc Sources/Sprites.swift tools/main.swift -o render
+      - name: Run tests
+        run: |
+          swiftc Sources/Sprites.swift Sources/HTTPServer.swift Sources/L10n.swift \
+            Tests/main.swift -o run_tests
+          ./run_tests
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shellcheck
+        run: shellcheck install.sh uninstall.sh setup.sh package.sh ask.sh notify.sh

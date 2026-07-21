@@ -5,7 +5,7 @@
 *Leia em [Português](README.pt-BR.md) · Website: [duperez.github.io/crab-companion](https://duperez.github.io/crab-companion/)*
 
 <p align="center">
-  <img src="docs/icon.png" width="160" alt="Craby, the Crab Companion pixel art crab">
+  <img src="docs/demo.gif" width="140" alt="Craby cycling through his states: idle, working on his laptop, celebrating, and asking for attention">
 </p>
 
 You send Claude Code off to work on something long, switch to another app, and… now what? Keep alt-tabbing to check? Craby solves the "is it done yet?" problem by always being in the corner of your eye:
@@ -25,11 +25,26 @@ And the best part: when Claude asks for permission or has a question, a **speech
 - **Ask the user anything** — a local HTTP API lets Claude (or any script) ask multiple-choice or free-text questions through the bubble, with graceful fallback to the terminal.
 - **Multi-session scoreboard** — running several Claude Code sessions? The crab shows the highest-priority state across all of them, with white dots for parallel working sessions and a tooltip listing each project's status. Clicking the crab raises the window of the project that needs you (requires Accessibility permission).
 - **Sounds** — subtle *pling* on done, *ping* on attention. Toggle in the menu bar menu.
-- **Safe by design** — if you don't answer a bubble in time, everything falls back to the normal terminal prompt. The crab never decides anything by itself.
+- **Daily stats and levels** — the menu bar shows what happened today (tasks finished, projects, time worked), the last events, and Craby's level: he grows from *hatchling* to *legend* as tasks pile up.
+- **Phone alerts when you're away** — optional: if nobody touches the Mac for 2 minutes and Claude needs you, Craby pings your phone via [ntfy](https://ntfy.sh) (see Configuration).
+- **Drag him anywhere** — grab and drop Craby wherever you like; the position is remembered. Bubble shortcuts too: click a bubble, then press 1/2/3 to choose or Esc for the terminal.
+- **Custom sprite packs** — the sprites are character grids; drop a `sprites.json` next to his config to reskin Craby entirely (cat? octopus? PRs welcome).
+- **English and Portuguese** — UI follows your system language.
+- **Safe by design** — if you don't answer a bubble in time, everything falls back to the normal terminal prompt. Craby never decides anything by himself, and the endpoints that *inject decisions* require a local secret token.
 
 ## Install
 
-Requirements: macOS 13+, [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/) (`xcode-select --install`), `jq` (`brew install jq`), and [Claude Code](https://claude.com/claude-code).
+Requirements: macOS 13+, `jq` (`brew install jq`), and [Claude Code](https://claude.com/claude-code).
+
+**Homebrew**
+
+```bash
+brew tap duperez/craby
+brew install --cask craby
+"/Applications/Craby.app/Contents/Resources/setup.sh"   # connects Craby to Claude Code
+```
+
+**From source** (also needs Xcode Command Line Tools, `xcode-select --install`)
 
 ```bash
 git clone https://github.com/duperez/crab-companion.git
@@ -37,9 +52,9 @@ cd crab-companion
 ./install.sh
 ```
 
-The installer compiles the app (~300 KB, zero dependencies), installs it to `~/Applications/Craby.app`, registers a LaunchAgent so it starts at login, and adds the Claude Code hooks to `~/.claude/settings.json` (your previous config is backed up, and existing hooks on the same events are never overwritten).
+**Prebuilt app** — grab `Craby.app.zip` from [Releases](https://github.com/duperez/crab-companion/releases), unzip into `/Applications`, run `xattr -dr com.apple.quarantine /Applications/Craby.app` (the app isn't code-signed), then run `setup.sh` inside `Craby.app/Contents/Resources/`.
 
-Restart any open Claude Code sessions and you're done. To remove everything: `./uninstall.sh`.
+Every path ends the same way: the app lands in `Applications/Craby.app` (~300 KB, zero dependencies), a LaunchAgent starts it at login, and the Claude Code hooks are added to `~/.claude/settings.json` — your previous config is backed up, and existing hooks on the same events are never overwritten. Restart any open Claude Code sessions and you're done. To remove everything: `./uninstall.sh`.
 
 ## How it works
 
@@ -71,10 +86,20 @@ Anything on your machine can talk to the crab:
 | `POST /ask` `{"title","detail","urgent"}` | permission bubble (Allow/Deny/Terminal), long-polls until click |
 | `POST /ask` `{...,"options":["A","B"]}` | multiple-choice bubble → answers `opt:0`, `opt:1`… |
 | `POST /ask` `{...,"input":true}` | free-text bubble → answers `txt:<typed text>` |
-| `GET /answer/<allow\|deny\|ask\|opt:N\|txt:...>` | answer the current bubble programmatically |
-| `GET /quit` | quit the app |
+| `GET /answer/<allow\|deny\|ask\|opt:N\|txt:...>` | answer the current bubble programmatically (**token required**) |
+| `GET /quit` | quit the app (**token required**) |
 
 Bubble answers: `ask` means "user wants the terminal" — always treat it (and connection errors) as "fall back to the normal flow".
+
+The two decision-injecting endpoints require a secret so no random local process can approve things on your behalf: pass `?token=$(cat "$HOME/Library/Application Support/Craby/token")` (or the `X-Craby-Token` header). The token is created on first launch, readable only by your user.
+
+## Configuration
+
+Everything optional, all in `~/Library/Application Support/Craby/`:
+
+- `config.json` — phone alerts for when you're away: `{"ntfyTopic": "your-secret-topic"}`. Subscribe to the same topic in the [ntfy app](https://ntfy.sh); Craby posts there when Claude needs you and the Mac has been idle for 2+ minutes.
+- `sprites.json` — reskin Craby: `{"states": {"idle": [[14 strings of 14 chars], …], …}, "palette": {"R": "#e8593d"}}`. States you omit keep the default art; invalid grids are ignored.
+- `stats.json` — Craby's memory (tasks, time worked, events). Delete it to reset his level.
 
 ## Let Claude ask you questions through the crab
 
@@ -92,7 +117,7 @@ Response `opt:N` = option index N; `txt:<text>` = typed answer (use `"input":tru
 
 ## Development
 
-Everything lives in one file, [`main.swift`](main.swift) (~700 lines of AppKit, no dependencies). The sprites are character grids — editing the crab is literally editing text:
+Plain AppKit, no dependencies, split into small modules under [`Sources/`](Sources/): `Sprites.swift` (pixel art + states), `HTTPServer.swift`, `Stats.swift`, `L10n.swift`, `App.swift`. The sprites are character grids — editing Craby is literally editing text:
 
 ```
 ".RR........RR.",
@@ -102,7 +127,17 @@ Everything lives in one file, [`main.swift`](main.swift) (~700 lines of AppKit, 
 ".RRWBRRRRWBRR.",
 ```
 
-Dev loop: `swiftc main.swift -o pet && ./pet`, then `curl localhost:4923/working` to poke states. To ship your change into the installed app, just run `./install.sh` again.
+Dev loop:
+
+```bash
+swiftc Sources/*.swift -o pet && ./pet     # run standalone
+curl localhost:4923/working                # poke states
+swiftc Sources/Sprites.swift Sources/HTTPServer.swift Sources/L10n.swift \
+  Tests/main.swift -o run_tests && ./run_tests
+./install.sh                               # ship your change into the installed app
+```
+
+CI runs the build, the tests and shellcheck on every push; tagging `v*` builds a universal binary and publishes the release automatically.
 
 ## License
 

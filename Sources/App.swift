@@ -3,364 +3,16 @@ import ApplicationServices
 import Network
 
 // ---------------------------------------------------------------------------
-// Grade
-// ---------------------------------------------------------------------------
-
-let gridCols = 14
-let gridRows = 14 // 4 de efeitos + 10 de caranguejo
-let pixelSize: CGFloat = 5
-let barPixelSize: CGFloat = 1.3 // pixel do ícone da menu bar (~18pt no total)
-let bubbleWidth: CGFloat = 280
-let bubbleHeight: CGFloat = 104
-
-// ---------------------------------------------------------------------------
-// Pixel art: cada string é uma linha, cada caractere um pixel.
-// R corpo, D sombra, W branco do olho, B pupila, Y amarelo (efeitos), . transparente
-// Cada quadro = 4 linhas de "efeitos" (área acima da cabeça) + 10 linhas de caranguejo.
-// ---------------------------------------------------------------------------
-
-let emptyFx = [
-    "..............",
-    "..............",
-    "..............",
-    "..............",
-]
-
-let exclaimFx = [
-    "......YY......",
-    "......YY......",
-    "..............",
-    "......YY......",
-]
-
-let sparkleFx1 = [
-    "..Y.......Y...",
-    "..............",
-    "......Y.......",
-    "..............",
-]
-
-let sparkleFx2 = [
-    "..............",
-    "....Y....Y....",
-    "..............",
-    ".Y..........Y.",
-]
-
-let clawsUp = [
-    ".RR........RR.",
-    ".RR........RR.",
-    "..R........R..",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    ".R.R..RR..R.R.",
-    "R..R..RR..R..R",
-]
-
-let clawsDown = [
-    "..............",
-    "RRR........RRR",
-    ".R..........R.",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    "R..R..RR..R..R",
-    ".R.R..RR..R.R.",
-]
-
-let leftUpRightDown = [
-    ".RR...........",
-    ".RR........RRR",
-    "..R........R..",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    ".R.R..RR..R.R.",
-    "R..R..RR..R..R",
-]
-
-let rightUpLeftDown = [
-    "...........RR.",
-    "RRR........RR.",
-    ".R.........R..",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    "R..R..RR..R..R",
-    ".R.R..RR..R.R.",
-]
-
-// trabalhando: debruçado no laptop, garras alternando no teclado, teclas voando
-// (grade completa de 14 linhas — não usa o prefixo de efeitos)
-let laptopLeft = [
-    "..............",
-    "...Y..........",
-    "..............",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    "...........RR.",
-    ".RR........RR.",
-    "..GGGGGGGGGG..",
-    "..GLLLLLLLLG..",
-    "..GGGGGGGGGG..",
-    "..............",
-]
-
-let laptopRight = [
-    "..............",
-    "..........Y...",
-    "..............",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    ".RR...........",
-    ".RR........RR.",
-    "..GGGGGGGGGG..",
-    "..GLLLLLLLLG..",
-    "..GGGGGGGGGG..",
-    "..............",
-]
-
-// olhos fechados (piscada): troca branco+pupila por pálpebras escuras
-func blinking(_ crab: [String]) -> [String] {
-    crab.map { $0.replacingOccurrences(of: "WB", with: "DD") }
-}
-
-// pulo: desloca o caranguejo uma linha pra cima dentro da grade
-func jumping(_ fx: [String], _ crab: [String]) -> [String] {
-    Array(fx.dropLast()) + crab + [String(repeating: ".", count: gridCols)]
-}
-
-let palette: [Character: NSColor] = [
-    "R": NSColor(red: 0.91, green: 0.35, blue: 0.24, alpha: 1.0),
-    "D": NSColor(red: 0.72, green: 0.22, blue: 0.14, alpha: 1.0),
-    "W": .white,
-    "B": .black,
-    "Y": NSColor(red: 1.0, green: 0.82, blue: 0.15, alpha: 1.0),
-    "G": NSColor(red: 0.35, green: 0.39, blue: 0.45, alpha: 1.0),
-    "L": NSColor(red: 0.60, green: 0.65, blue: 0.71, alpha: 1.0),
-]
-
-// ---------------------------------------------------------------------------
-// Estados
-// ---------------------------------------------------------------------------
-
-enum PetState: String {
-    case idle, working, done, attention
-
-    var frames: [[String]] {
-        switch self {
-        case .idle:
-            // tamborila devagar e pisca de vez em quando
-            return [
-                emptyFx + clawsUp,
-                emptyFx + clawsDown,
-                emptyFx + clawsUp,
-                emptyFx + blinking(clawsDown),
-            ]
-        case .working:
-            return [laptopLeft, laptopRight]
-        case .done:
-            // comemora pulando entre as faíscas
-            return [sparkleFx1 + clawsUp, jumping(sparkleFx2, clawsUp)]
-        case .attention:
-            // acena alternando as garras com o "!" piscando
-            return [
-                exclaimFx + clawsUp,
-                emptyFx + rightUpLeftDown,
-                exclaimFx + clawsUp,
-                emptyFx + leftUpRightDown,
-            ]
-        }
-    }
-
-    var interval: TimeInterval {
-        switch self {
-        case .idle: return 0.8
-        case .working: return 0.2
-        case .done: return 0.4
-        case .attention: return 0.35
-        }
-    }
-
-    // prioridade de exibição quando há várias sessões
-    var priority: Int {
-        switch self {
-        case .attention: return 3
-        case .working: return 2
-        case .done: return 1
-        case .idle: return 0
-        }
-    }
-
-    var labelPt: String {
-        switch self {
-        case .idle: return "ocioso"
-        case .working: return "trabalhando"
-        case .done: return "terminou"
-        case .attention: return "precisa de você"
-        }
-    }
-}
-
-func drawGrid(_ grid: [String], pixel: CGFloat, height: CGFloat) {
-    for (row, line) in grid.enumerated() {
-        for (col, ch) in line.enumerated() {
-            guard let color = palette[ch] else { continue }
-            color.setFill()
-            NSRect(
-                x: CGFloat(col) * pixel,
-                // linhas do desenho são de cima pra baixo; o sistema desenha de baixo pra cima
-                y: height - CGFloat(row + 1) * pixel,
-                width: pixel,
-                height: pixel
-            ).fill()
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Servidor de controle
-//   GET  /idle|working|done|attention[?session=id&project=nome]
-//   GET  /quit
-//   GET  /answer/<allow|deny|ask|opt:N|txt:...>   -> responde o pedido pendente
-//   POST /ask {title, detail, urgent, options?, input?}
-//        segura a conexão (long-poll) até a escolha do usuário
-// ---------------------------------------------------------------------------
-
-struct AskPayload: Codable {
-    let title: String
-    let detail: String
-    let urgent: Bool
-    // modo pergunta: rótulos das opções; modo texto: input=true;
-    // nenhum dos dois = modo permissão (Permitir/Negar/Terminal)
-    let options: [String]?
-    let input: Bool?
-}
-
-struct HTTPRequest {
-    let method: String
-    let path: String
-    let query: [String: String]
-    let body: Data
-}
-
-final class ControlServer {
-    let listener: NWListener
-    let onCommand: (String, [String: String]) -> Void // (comando, query)
-    let onAsk: (AskPayload, NWConnection) -> Void
-
-    init(port: UInt16,
-         onCommand: @escaping (String, [String: String]) -> Void,
-         onAsk: @escaping (AskPayload, NWConnection) -> Void) throws {
-        self.onCommand = onCommand
-        self.onAsk = onAsk
-        listener = try NWListener(using: .tcp, on: NWEndpoint.Port(rawValue: port)!)
-        listener.newConnectionHandler = { [weak self] conn in
-            conn.start(queue: .main)
-            self?.receiveRequest(conn, buffer: Data())
-        }
-        listener.start(queue: .main)
-    }
-
-    private func receiveRequest(_ conn: NWConnection, buffer: Data) {
-        conn.receive(minimumIncompleteLength: 1, maximumLength: 16384) {
-            [weak self] data, _, isComplete, error in
-            guard let self else { conn.cancel(); return }
-            var buffer = buffer
-            if let data { buffer.append(data) }
-            if let request = Self.parse(buffer) {
-                self.route(request, conn: conn)
-            } else if !isComplete && error == nil {
-                self.receiveRequest(conn, buffer: buffer) // corpo ainda não chegou inteiro
-            } else {
-                conn.cancel()
-            }
-        }
-    }
-
-    private func route(_ request: HTTPRequest, conn: NWConnection) {
-        if request.method == "POST" && request.path == "/ask" {
-            if let payload = try? JSONDecoder().decode(AskPayload.self, from: request.body) {
-                onAsk(payload, conn) // conexão fica aberta; respond() é chamado depois
-            } else {
-                Self.respond(conn, body: "ask")
-            }
-            return
-        }
-        let command = request.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        onCommand(command.removingPercentEncoding ?? command, request.query)
-        Self.respond(conn, body: "ok")
-    }
-
-    static func respond(_ conn: NWConnection, body: String) {
-        let data = body.data(using: .utf8)!
-        let response = "HTTP/1.1 200 OK\r\nContent-Length: \(data.count)\r\nConnection: close\r\n\r\n"
-        conn.send(content: response.data(using: .utf8)! + data,
-                  completion: .contentProcessed { _ in conn.cancel() })
-    }
-
-    static func parse(_ buffer: Data) -> HTTPRequest? {
-        guard let headerEnd = buffer.range(of: Data("\r\n\r\n".utf8)),
-              let head = String(data: buffer[buffer.startIndex..<headerEnd.lowerBound],
-                                encoding: .utf8)
-        else { return nil }
-        let lines = head.components(separatedBy: "\r\n")
-        let parts = lines[0].split(separator: " ")
-        guard parts.count >= 2 else { return nil }
-        var contentLength = 0
-        for line in lines.dropFirst() {
-            let kv = line.split(separator: ":", maxSplits: 1)
-            if kv.count == 2, kv[0].lowercased() == "content-length" {
-                contentLength = Int(kv[1].trimmingCharacters(in: .whitespaces)) ?? 0
-            }
-        }
-        let bodyAvailable = buffer.distance(from: headerEnd.upperBound, to: buffer.endIndex)
-        guard bodyAvailable >= contentLength else { return nil }
-        let body = buffer.subdata(
-            in: headerEnd.upperBound..<buffer.index(headerEnd.upperBound, offsetBy: contentLength))
-
-        // separa caminho e query string (valores com percent-encoding)
-        let rawPath = String(parts[1])
-        let pathParts = rawPath.split(separator: "?", maxSplits: 1)
-        var query: [String: String] = [:]
-        if pathParts.count == 2 {
-            for pair in pathParts[1].split(separator: "&") {
-                let kv = pair.split(separator: "=", maxSplits: 1)
-                if kv.count == 2 {
-                    let value = String(kv[1])
-                    query[String(kv[0])] = value.removingPercentEncoding ?? value
-                }
-            }
-        }
-        return HTTPRequest(
-            method: String(parts[0]),
-            path: String(pathParts[0]),
-            query: query,
-            body: body)
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Painel/botão que aceitam interação sem ativar o app
 // ---------------------------------------------------------------------------
 
 final class BubblePanel: NSPanel {
+    var onKey: ((NSEvent) -> Bool)?
     override var canBecomeKey: Bool { true }
+    override func keyDown(with event: NSEvent) {
+        if onKey?(event) == true { return }
+        super.keyDown(with: event)
+    }
 }
 
 final class FirstClickButton: NSButton {
@@ -375,14 +27,17 @@ struct SessionInfo {
     var state: PetState
     var at: Date
     var project: String?
+    var workingSince: Date?
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+struct CrabyConfig: Codable {
+    var ntfyTopic: String?
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var window: NSWindow!
     var petView: PetView!
     var statusItem: NSStatusItem!
-    var toggleMenuItem: NSMenuItem!
-    var soundMenuItem: NSMenuItem!
     var server: ControlServer?
 
     var state: PetState = .idle
@@ -402,16 +57,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var inputField: NSTextField?
     var askTimeout: DispatchWorkItem?
 
+    var stats: StatsStore!
+    var config = CrabyConfig()
+    var authToken = ""
+
+    var appSupportDir: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Craby")
+    }
+
     var soundsEnabled: Bool {
         UserDefaults.standard.object(forKey: "soundsEnabled") as? Bool ?? true
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        try? FileManager.default.createDirectory(
+            at: appSupportDir, withIntermediateDirectories: true)
+        stats = StatsStore(url: appSupportDir.appendingPathComponent("stats.json"))
+        authToken = loadOrCreateToken()
+        loadConfig()
+        loadCustomSprites(from: appSupportDir.appendingPathComponent("sprites.json"))
+
         let width = CGFloat(gridCols) * pixelSize
         let height = CGFloat(gridRows) * pixelSize
 
         window = NSWindow(
-            contentRect: frameForTopRight(width: width, height: height),
+            contentRect: initialFrame(width: width, height: height),
             styleMask: .borderless,
             backing: .buffered,
             defer: false
@@ -423,9 +94,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // canJoinAllSpaces: existe em todos os desktops virtuais
         // fullScreenAuxiliary: aparece também sobre apps em tela cheia
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.isMovableByWindowBackground = false
 
         petView = PetView(frame: NSRect(x: 0, y: 0, width: width, height: height))
         petView.onAcknowledge = { [weak self] in self?.petClicked() }
+        petView.onMoved = { [weak self] in self?.savePosition() }
         window.contentView = petView
         window.orderFrontRegardless()
 
@@ -435,7 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             guard let self else { return }
             self.window.setFrame(
-                self.frameForTopRight(width: width, height: height), display: true)
+                self.initialFrame(width: width, height: height), display: true)
         }
 
         setupStatusItem()
@@ -449,6 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             server = try ControlServer(
                 port: 4923,
+                authToken: authToken,
                 onCommand: { [weak self] command, query in
                     guard let self else { return }
                     if command == "quit" { NSApp.terminate(nil); return }
@@ -470,29 +144,152 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             )
         } catch {
-            NSLog("claude-pet: falha ao abrir porta 4923: \(error)")
+            NSLog("craby: falha ao abrir porta 4923: \(error)")
         }
     }
 
+    // ------------------------------------------------------------------
+    // Token e configuração
+    // ------------------------------------------------------------------
+
+    private func loadOrCreateToken() -> String {
+        let url = appSupportDir.appendingPathComponent("token")
+        if let existing = try? String(contentsOf: url, encoding: .utf8) {
+            let token = existing.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !token.isEmpty { return token }
+        }
+        let token = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        try? token.write(to: url, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes(
+            [.posixPermissions: 0o600], ofItemAtPath: url.path)
+        return token
+    }
+
+    private func loadConfig() {
+        let url = appSupportDir.appendingPathComponent("config.json")
+        if let raw = try? Data(contentsOf: url),
+           let loaded = try? JSONDecoder().decode(CrabyConfig.self, from: raw) {
+            config = loaded
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Posição: arrastável, persistida, com fallback pro canto padrão
+    // ------------------------------------------------------------------
+
+    func defaultFrame(width: CGFloat, height: CGFloat) -> NSRect {
+        let screen = NSScreen.main ?? NSScreen.screens[0]
+        let area = screen.visibleFrame
+        let margin: CGFloat = 12
+        return NSRect(
+            x: area.maxX - margin - bubbleWidth / 2 - width / 2,
+            y: area.maxY - height - margin,
+            width: width, height: height
+        )
+    }
+
+    func initialFrame(width: CGFloat, height: CGFloat) -> NSRect {
+        if let saved = UserDefaults.standard.array(forKey: "petOrigin") as? [Double],
+           saved.count == 2 {
+            let rect = NSRect(x: saved[0], y: saved[1], width: width, height: height)
+            // só usa a posição salva se ela ainda estiver em alguma tela
+            if NSScreen.screens.contains(where: { $0.visibleFrame.intersects(rect) }) {
+                return rect
+            }
+        }
+        return defaultFrame(width: width, height: height)
+    }
+
+    func savePosition() {
+        let origin = window.frame.origin
+        UserDefaults.standard.set([origin.x, origin.y], forKey: "petOrigin")
+    }
+
+    @objc func resetPosition() {
+        UserDefaults.standard.removeObject(forKey: "petOrigin")
+        let size = window.frame.size
+        window.setFrame(defaultFrame(width: size.width, height: size.height), display: true)
+    }
+
+    // ------------------------------------------------------------------
+    // Menu da barra (reconstruído a cada abertura, com stats e eventos)
+    // ------------------------------------------------------------------
+
     func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-
         let menu = NSMenu()
-        toggleMenuItem = NSMenuItem(
-            title: "Recolher para a barra",
-            action: #selector(toggleFloating), keyEquivalent: "")
-        toggleMenuItem.target = self
-        menu.addItem(toggleMenuItem)
-        soundMenuItem = NSMenuItem(
-            title: "Sons", action: #selector(toggleSounds), keyEquivalent: "")
-        soundMenuItem.target = self
-        soundMenuItem.state = soundsEnabled ? .on : .off
-        menu.addItem(soundMenuItem)
-        menu.addItem(NSMenuItem.separator())
-        let quitItem = NSMenuItem(
-            title: "Sair", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        menu.addItem(quitItem)
+        menu.delegate = self
         statusItem.menu = menu
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        menu.removeAllItems()
+
+        let lvl = stats.level
+        let header = NSMenuItem(
+            title: L.levelLine(level: lvl.number, name: lvl.name, total: stats.data.totalTasks),
+            action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+
+        let day = stats.today
+        let todayItem = NSMenuItem(
+            title: L.todayLine(
+                tasks: day.tasks, projects: day.projects.count, workSeconds: day.workSeconds),
+            action: nil, keyEquivalent: "")
+        todayItem.isEnabled = false
+        menu.addItem(todayItem)
+
+        let eventsItem = NSMenuItem(title: L.recentEvents, action: nil, keyEquivalent: "")
+        let eventsMenu = NSMenu()
+        let events = stats.recentEvents()
+        if events.isEmpty {
+            let none = NSMenuItem(title: L.noEvents, action: nil, keyEquivalent: "")
+            none.isEnabled = false
+            eventsMenu.addItem(none)
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            for event in events {
+                let kind = event.kind == "done"
+                    ? L.stateLabel(.done) : L.stateLabel(.attention)
+                let item = NSMenuItem(
+                    title: "\(formatter.string(from: event.ts)) · \(event.project) · \(kind)",
+                    action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                eventsMenu.addItem(item)
+            }
+        }
+        eventsItem.submenu = eventsMenu
+        menu.addItem(eventsItem)
+        menu.addItem(NSMenuItem.separator())
+
+        let toggle = NSMenuItem(
+            title: floatingVisible ? L.collapseToBar : L.showFloating,
+            action: #selector(toggleFloating), keyEquivalent: "")
+        toggle.target = self
+        menu.addItem(toggle)
+
+        let sounds = NSMenuItem(title: L.sounds, action: #selector(toggleSounds), keyEquivalent: "")
+        sounds.target = self
+        sounds.state = soundsEnabled ? .on : .off
+        menu.addItem(sounds)
+
+        let reset = NSMenuItem(
+            title: L.resetPosition, action: #selector(resetPosition), keyEquivalent: "")
+        reset.target = self
+        menu.addItem(reset)
+
+        let remote = NSMenuItem(
+            title: (config.ntfyTopic?.isEmpty == false) ? L.remoteOn : L.remoteOff,
+            action: nil, keyEquivalent: "")
+        remote.isEnabled = false
+        menu.addItem(remote)
+
+        menu.addItem(NSMenuItem.separator())
+        let quit = NSMenuItem(
+            title: L.quit, action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(quit)
     }
 
     @objc func toggleFloating() {
@@ -502,12 +299,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             window.orderOut(nil)
         }
-        toggleMenuItem.title = floatingVisible ? "Recolher para a barra" : "Mostrar flutuante"
     }
 
     @objc func toggleSounds() {
         UserDefaults.standard.set(!soundsEnabled, forKey: "soundsEnabled")
-        soundMenuItem.state = soundsEnabled ? .on : .off
     }
 
     func playSound(for newState: PetState) {
@@ -520,13 +315,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // ------------------------------------------------------------------
+    // Modo ausente: se ninguém mexe no Mac há 2min e o Claude precisa de
+    // você, avisa no celular via ntfy (se configurado em config.json)
+    // ------------------------------------------------------------------
+
+    func secondsSinceLastInput() -> Double {
+        let types: [CGEventType] = [.keyDown, .mouseMoved, .leftMouseDown, .scrollWheel]
+        return types.map {
+            CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: $0)
+        }.min() ?? 0
+    }
+
+    func maybeNotifyPhone(project: String?) {
+        guard let topic = config.ntfyTopic, !topic.isEmpty,
+              secondsSinceLastInput() > 120,
+              let url = URL(string: "https://ntfy.sh/\(topic)")
+        else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("crab", forHTTPHeaderField: "X-Tags")
+        request.setValue("Craby", forHTTPHeaderField: "X-Title")
+        let proj = project.map { "\($0): " } ?? ""
+        request.httpBody = "🦀 \(proj)\(L.needsYouPush)".data(using: .utf8)
+        URLSession.shared.dataTask(with: request).resume()
+    }
+
+    // ------------------------------------------------------------------
     // Multi-sessão: cada sessão tem um estado; o pet exibe o de maior prioridade
     // ------------------------------------------------------------------
 
     func sessionEvent(_ newState: PetState, session: String, project: String? = nil) {
+        let now = Date()
         let existing = sessions[session]
+        let proj = project ?? existing?.project
+        var workingSince = existing?.workingSince
+
+        if newState == .working {
+            if existing?.state != .working { workingSince = now }
+        } else {
+            if existing?.state == .working, let since = workingSince {
+                stats.addWork(project: proj ?? "?", seconds: now.timeIntervalSince(since))
+            }
+            workingSince = nil
+        }
+        if newState == .done {
+            stats.recordDone(project: proj ?? "?")
+        }
+        if newState == .attention {
+            stats.recordAttention(project: proj ?? "?")
+            maybeNotifyPhone(project: proj)
+        }
+
         sessions[session] = SessionInfo(
-            state: newState, at: Date(), project: project ?? existing?.project)
+            state: newState, at: now, project: proj, workingSince: workingSince)
         recomputeDisplayed()
     }
 
@@ -563,13 +404,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateTooltip() {
         let active = sessions.filter { $0.value.state != .idle }
         if active.isEmpty {
-            petView.toolTip = "Craby — tudo calmo"
-        } else {
-            petView.toolTip = active.values
-                .map { "\($0.project ?? "sessão"): \($0.state.labelPt)" }
-                .sorted()
-                .joined(separator: "\n")
+            petView.toolTip = L.allCalm
+            return
         }
+        let now = Date()
+        petView.toolTip = active.values
+            .map { info -> String in
+                let name = info.project ?? L.sessionFallback
+                if info.state == .working, let since = info.workingSince {
+                    let minutes = max(0, Int(now.timeIntervalSince(since) / 60))
+                    return "\(name): \(L.workingFor(minutes))"
+                }
+                return "\(name): \(L.stateLabel(info.state))"
+            }
+            .sorted()
+            .joined(separator: "\n")
     }
 
     private var workingCount: Int {
@@ -629,7 +478,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func showNextAsk() {
         guard currentAsk == nil, !askQueue.isEmpty else { return }
         currentAsk = askQueue.removeFirst()
-        sessionEvent(.attention, session: "ask")
+
+        // extrai "[projeto]" do título, se houver, para o registro de eventos
+        let title = currentAsk!.payload.title
+        var project: String?
+        if let open = title.firstIndex(of: "["), let close = title.firstIndex(of: "]"),
+           open < close {
+            project = String(title[title.index(after: open)..<close])
+        }
+        sessionEvent(.attention, session: "ask", project: project)
         showBubble(for: currentAsk!.payload)
 
         // se ninguém interagir, devolve "ask" -> prompt normal no terminal
@@ -675,11 +532,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             h = bubbleHeight
         }
         let petFrame = window.frame
-        let screen = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame
-        // abaixo do pet, centralizado com ele (sem sair da tela)
+        let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        let area = screen.visibleFrame
+        // abaixo do pet, centralizado; se não couber, abre acima
         var x = petFrame.midX - w / 2
-        x = max(screen.minX + 8, min(x, screen.maxX - w - 8))
-        let y = petFrame.minY - h - 8
+        x = max(area.minX + 8, min(x, area.maxX - w - 8))
+        var y = petFrame.minY - h - 8
+        if y < area.minY + 8 { y = petFrame.maxY + 8 }
 
         let bubble = BubblePanel(
             contentRect: NSRect(x: x, y: y, width: w, height: h),
@@ -689,6 +548,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bubble.hasShadow = true
         bubble.level = .floating
         bubble.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        bubble.onKey = { [weak self] event in self?.handleBubbleKey(event) ?? false }
 
         let container = NSView(frame: NSRect(x: 0, y: 0, width: w, height: h))
         container.wantsLayer = true
@@ -698,9 +558,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         container.layer?.borderColor =
             (ask.urgent ? NSColor.systemRed : NSColor.systemYellow).cgColor
 
-        let title = NSTextField(labelWithString: ask.title)
+        // badge da fila: avisa quantos pedidos aguardam atrás deste
+        var titleText = ask.title
+        if !askQueue.isEmpty {
+            titleText += "  (+\(askQueue.count) \(L.queueSuffix))"
+        }
+        let title = NSTextField(labelWithString: titleText)
         title.font = .boldSystemFont(ofSize: 11)
         title.textColor = .white
+        title.lineBreakMode = .byTruncatingTail
         title.frame = NSRect(x: 12, y: h - 26, width: w - 24, height: 16)
         container.addSubview(title)
 
@@ -716,14 +582,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isInput {
             let field = NSTextField(frame: NSRect(x: 12, y: 42, width: w - 24, height: 24))
             field.font = .systemFont(ofSize: 11)
-            field.placeholderString = "Digite sua resposta…"
+            field.placeholderString = L.typeAnswer
             field.target = self
             field.action = #selector(inputSubmitted) // Enter envia
             container.addSubview(field)
             inputField = field
 
             let send = FirstClickButton(
-                title: "Enviar", target: self, action: #selector(inputSubmitted))
+                title: L.send, target: self, action: #selector(inputSubmitted))
             send.bezelStyle = .rounded
             send.controlSize = .small
             send.font = .systemFont(ofSize: 11)
@@ -731,7 +597,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             container.addSubview(send)
 
             let terminal = FirstClickButton(
-                title: "Responder no terminal", target: self,
+                title: L.answerInTerminal, target: self,
                 action: #selector(terminalButtonClicked(_:)))
             terminal.bezelStyle = .inline
             terminal.controlSize = .small
@@ -753,7 +619,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 container.addSubview(button)
             }
             let terminal = FirstClickButton(
-                title: "Responder no terminal", target: self,
+                title: L.answerInTerminal, target: self,
                 action: #selector(terminalButtonClicked(_:)))
             terminal.bezelStyle = .inline
             terminal.controlSize = .small
@@ -761,7 +627,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             terminal.frame = NSRect(x: 12, y: 8, width: w - 24, height: 20)
             container.addSubview(terminal)
         } else {
-            let labels = ["Permitir", "Negar", "Terminal"]
+            let labels = [L.allow, L.deny, L.terminal]
             let buttonWidth = (w - 24 - 16) / 3
             for (i, label) in labels.enumerated() {
                 let button = FirstClickButton(
@@ -785,6 +651,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             bubble.orderFrontRegardless()
         }
         bubbleWindow = bubble
+    }
+
+    // atalhos com o balão focado (clicado): 1..4 escolhem, Esc = terminal
+    func handleBubbleKey(_ event: NSEvent) -> Bool {
+        guard let current = currentAsk else { return false }
+        if event.keyCode == 53 { // Esc
+            focusClaudeApp()
+            answerCurrentAsk("ask")
+            return true
+        }
+        guard current.payload.input != true, let chars = event.characters,
+              let digit = Int(chars), digit >= 1
+        else { return false }
+        if let options = current.payload.options {
+            guard digit <= options.count else { return false }
+            answerCurrentAsk("opt:\(digit - 1)")
+        } else {
+            guard digit <= 3 else { return false }
+            if digit == 3 { focusClaudeApp() }
+            answerCurrentAsk(["allow", "deny", "ask"][digit - 1])
+        }
+        return true
     }
 
     @objc func permissionButtonClicked(_ sender: NSButton) {
@@ -846,40 +734,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         barImageCache[key] = image
         return image
     }
-
-    func frameForTopRight(width: CGFloat, height: CGFloat) -> NSRect {
-        let screen = NSScreen.main ?? NSScreen.screens[0]
-        let area = screen.visibleFrame // exclui a menu bar
-        let margin: CGFloat = 12
-        // afastado do canto: centralizado sobre a área onde o balão abre embaixo
-        return NSRect(
-            x: area.maxX - margin - bubbleWidth / 2 - width / 2,
-            y: area.maxY - height - margin,
-            width: width, height: height
-        )
-    }
 }
 
 final class PetView: NSView {
     var grid: [String] = []
     var onAcknowledge: (() -> Void)?
+    var onMoved: (() -> Void)?
 
     override func draw(_ dirtyRect: NSRect) {
         drawGrid(grid, pixel: pixelSize, height: bounds.height)
     }
 
-    // Clique esquerdo: foca quem precisa e reconhece avisos. Clique direito: sai.
+    // Clique esquerdo: foca quem precisa e reconhece avisos.
+    // Arrastar: move o Craby (posição fica salva). Clique direito: sai.
     override func mouseDown(with event: NSEvent) {
-        onAcknowledge?()
+        let before = window?.frame.origin ?? .zero
+        window?.performDrag(with: event) // bloqueia até soltar o mouse
+        let after = window?.frame.origin ?? .zero
+        if abs(before.x - after.x) < 3 && abs(before.y - after.y) < 3 {
+            onAcknowledge?()
+        } else {
+            onMoved?()
+        }
     }
 
     override func rightMouseDown(with event: NSEvent) {
         NSApp.terminate(nil)
     }
 }
-
-let app = NSApplication.shared
-app.setActivationPolicy(.accessory) // sem ícone no Dock, nunca rouba foco
-let delegate = AppDelegate()
-app.delegate = delegate
-app.run()

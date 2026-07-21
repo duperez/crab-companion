@@ -5,7 +5,7 @@
 *Read in [English](README.md) · Site: [duperez.github.io/crab-companion](https://duperez.github.io/crab-companion/)*
 
 <p align="center">
-  <img src="docs/icon.png" width="160" alt="Craby, o caranguejo pixel art do Crab Companion">
+  <img src="docs/demo.gif" width="140" alt="Craby passando pelos estados: ocioso, trabalhando no laptop, comemorando e pedindo atenção">
 </p>
 
 Você manda o Claude Code trabalhar em algo demorado, troca de aplicativo e… e agora? Fica dando alt-tab pra conferir? O Craby resolve o problema do "já terminou?" ficando sempre no canto do seu olho:
@@ -25,11 +25,26 @@ E o melhor: quando o Claude pede permissão ou tem uma pergunta, um **balão de 
 - **Perguntas pelo balão** — uma API HTTP local permite que o Claude (ou qualquer script) faça perguntas de múltipla escolha ou texto livre pelo balão, com fallback pro terminal.
 - **Placar multi-sessão** — várias sessões do Claude Code ao mesmo tempo? O caranguejo mostra o estado de maior prioridade entre todas, com pontinhos brancos para sessões trabalhando em paralelo e um tooltip listando o status de cada projeto. Clicar nele ergue a janela do projeto que precisa de você (requer permissão de Acessibilidade).
 - **Sons** — *plim* discreto no terminou, *ping* na atenção. Liga/desliga no menu da barra.
-- **Seguro por padrão** — se você não responder um balão a tempo, tudo cai no prompt normal do terminal. O caranguejo nunca decide nada sozinho.
+- **Estatísticas e níveis** — o menu da barra mostra o dia (tarefas concluídas, projetos, tempo trabalhado), os últimos eventos e o nível do Craby: ele cresce de *filhote* a *lenda* conforme as tarefas acumulam.
+- **Aviso no celular quando você está longe** — opcional: se ninguém mexe no Mac há 2 minutos e o Claude precisa de você, o Craby avisa seu celular via [ntfy](https://ntfy.sh) (veja Configuração).
+- **Arraste pra onde quiser** — pegue e solte o Craby em qualquer lugar; a posição fica salva. Atalhos no balão também: clique nele e aperte 1/2/3 pra escolher ou Esc pro terminal.
+- **Sprites customizados** — os sprites são grades de caracteres; um `sprites.json` na pasta de configuração troca o visual inteiro (gato? polvo? PRs bem-vindos).
+- **Português e inglês** — a interface segue o idioma do sistema.
+- **Seguro por padrão** — se você não responder um balão a tempo, tudo cai no prompt normal do terminal. O Craby nunca decide nada sozinho, e os endpoints que *injetam decisões* exigem um token secreto local.
 
 ## Instalação
 
-Requisitos: macOS 13+, [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/) (`xcode-select --install`), `jq` (`brew install jq`) e [Claude Code](https://claude.com/claude-code).
+Requisitos: macOS 13+, `jq` (`brew install jq`) e [Claude Code](https://claude.com/claude-code).
+
+**Homebrew**
+
+```bash
+brew tap duperez/craby
+brew install --cask craby
+"/Applications/Craby.app/Contents/Resources/setup.sh"   # conecta o Craby ao Claude Code
+```
+
+**Do código-fonte** (precisa também do Xcode Command Line Tools, `xcode-select --install`)
 
 ```bash
 git clone https://github.com/duperez/crab-companion.git
@@ -37,9 +52,9 @@ cd crab-companion
 ./install.sh
 ```
 
-O instalador compila o app (~300 KB, zero dependências), instala em `~/Applications/Craby.app`, registra um LaunchAgent pra iniciar no login e adiciona os hooks do Claude Code no `~/.claude/settings.json` (sua configuração anterior ganha backup, e hooks existentes nos mesmos eventos nunca são sobrescritos).
+**App pronto** — baixe o `Craby.app.zip` nos [Releases](https://github.com/duperez/crab-companion/releases), descompacte em `/Applications`, rode `xattr -dr com.apple.quarantine /Applications/Craby.app` (o app não é assinado) e execute o `setup.sh` que está em `Craby.app/Contents/Resources/`.
 
-Reinicie as sessões do Claude Code abertas e pronto. Pra remover tudo: `./uninstall.sh`.
+Todos os caminhos terminam igual: o app em `Applications/Craby.app` (~300 KB, zero dependências), um LaunchAgent iniciando no login e os hooks do Claude Code no `~/.claude/settings.json` — sua configuração anterior ganha backup, e hooks existentes nos mesmos eventos nunca são sobrescritos. Reinicie as sessões abertas do Claude Code e pronto. Pra remover tudo: `./uninstall.sh`.
 
 ## Como funciona
 
@@ -71,10 +86,20 @@ Qualquer coisa na sua máquina pode conversar com o caranguejo:
 | `POST /ask` `{"title","detail","urgent"}` | balão de permissão (Permitir/Negar/Terminal), long-poll até o clique |
 | `POST /ask` `{...,"options":["A","B"]}` | balão de múltipla escolha → responde `opt:0`, `opt:1`… |
 | `POST /ask` `{...,"input":true}` | balão de texto livre → responde `txt:<texto digitado>` |
-| `GET /answer/<allow\|deny\|ask\|opt:N\|txt:...>` | responde o balão atual programaticamente |
-| `GET /quit` | encerra o app |
+| `GET /answer/<allow\|deny\|ask\|opt:N\|txt:...>` | responde o balão atual programaticamente (**exige token**) |
+| `GET /quit` | encerra o app (**exige token**) |
 
 Respostas do balão: `ask` significa "o usuário prefere o terminal" — trate isso (e erros de conexão) sempre como "volte pro fluxo normal".
+
+Os dois endpoints que injetam decisões exigem um segredo, pra que nenhum processo local aleatório aprove coisas por você: passe `?token=$(cat "$HOME/Library/Application Support/Craby/token")` (ou o header `X-Craby-Token`). O token é criado no primeiro uso, legível só pelo seu usuário.
+
+## Configuração
+
+Tudo opcional, tudo em `~/Library/Application Support/Craby/`:
+
+- `config.json` — aviso no celular quando ausente: `{"ntfyTopic": "seu-topico-secreto"}`. Assine o mesmo tópico no [app do ntfy](https://ntfy.sh); o Craby publica lá quando o Claude precisa de você e o Mac está parado há 2+ minutos.
+- `sprites.json` — troque o visual: `{"states": {"idle": [[14 strings de 14 chars], …], …}, "palette": {"R": "#e8593d"}}`. Estados omitidos mantêm a arte padrão; grades inválidas são ignoradas.
+- `stats.json` — a memória do Craby (tarefas, tempo, eventos). Apague pra resetar o nível dele.
 
 ## Deixe o Claude te perguntar pelo caranguejo
 
@@ -92,7 +117,7 @@ Resposta `opt:N` = opção de índice N; `txt:<texto>` = resposta digitada (use 
 
 ## Desenvolvimento
 
-Tudo vive num arquivo só, o [`main.swift`](main.swift) (~700 linhas de AppKit, sem dependências). Os sprites são grades de caracteres — editar o caranguejo é literalmente editar texto:
+AppKit puro, sem dependências, em módulos pequenos dentro de [`Sources/`](Sources/): `Sprites.swift` (pixel art + estados), `HTTPServer.swift`, `Stats.swift`, `L10n.swift`, `App.swift`. Os sprites são grades de caracteres — editar o Craby é literalmente editar texto:
 
 ```
 ".RR........RR.",
@@ -102,7 +127,17 @@ Tudo vive num arquivo só, o [`main.swift`](main.swift) (~700 linhas de AppKit, 
 ".RRWBRRRRWBRR.",
 ```
 
-Ciclo de dev: `swiftc main.swift -o pet && ./pet`, e `curl localhost:4923/working` pra cutucar os estados. Pra levar sua mudança pro app instalado, rode `./install.sh` de novo.
+Ciclo de dev:
+
+```bash
+swiftc Sources/*.swift -o pet && ./pet     # rodar avulso
+curl localhost:4923/working                # cutucar estados
+swiftc Sources/Sprites.swift Sources/HTTPServer.swift Sources/L10n.swift \
+  Tests/main.swift -o run_tests && ./run_tests
+./install.sh                               # levar a mudança pro app instalado
+```
+
+O CI roda build, testes e shellcheck a cada push; uma tag `v*` compila o binário universal e publica o release automaticamente.
 
 ## Licença
 
