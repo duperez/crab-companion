@@ -68,8 +68,18 @@ cat > "$PLIST" <<EOF
 </dict>
 </plist>
 EOF
+# bootout é assíncrono: espera descarregar antes do bootstrap, com fallback pra kickstart
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-launchctl bootstrap "gui/$(id -u)" "$PLIST"
+sleep 1
+if ! launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null; then
+  launchctl kickstart -k "gui/$(id -u)/$LABEL" 2>/dev/null || {
+    echo "aviso: não consegui (re)carregar o LaunchAgent agora; ele carrega no próximo login."
+  }
+fi
+for _ in 1 2 3 4 5; do
+  sleep 1
+  curl -s -m 1 localhost:4923/idle >/dev/null 2>&1 && break
+done
 
 echo "==> Hooks do Claude Code em $SETTINGS"
 mkdir -p "$HOME/.claude"
