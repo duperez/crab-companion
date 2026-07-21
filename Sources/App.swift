@@ -254,6 +254,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 if babies[i].tick >= 6 { // ~2,4s de bengala
                     babies[i].phase = .poof
                     babies[i].tick = 0
+                    if soundsEnabled {
+                        // cristalzinho no puf normal; baque grave no puf de erro
+                        NSSound(named: babies[i].failed ? "Basso" : "Tink")?.play()
+                    }
                 }
             case .poof:
                 break
