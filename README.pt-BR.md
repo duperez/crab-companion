@@ -2,7 +2,7 @@
 
 > Conheça o **Craby** — um caranguejinho em pixel art que vive por cima da tela do seu Mac e te conta o que o Claude Code está fazendo. E deixa você responder sem tocar no terminal.
 
-*Read in [English](README.md).*
+*Read in [English](README.md) · Site: [duperez.github.io/crab-companion](https://duperez.github.io/crab-companion/)*
 
 <p align="center">
   <img src="docs/icon.png" width="160" alt="Craby, o caranguejo pixel art do Crab Companion">

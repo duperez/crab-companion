@@ -2,7 +2,7 @@
 
 > Meet **Craby** — a tiny pixel-art crab that lives on top of your Mac screen and tells you what Claude Code is up to. And lets you answer back without touching the terminal.
 
-*Leia em [Português](README.pt-BR.md).*
+*Leia em [Português](README.pt-BR.md) · Website: [duperez.github.io/crab-companion](https://duperez.github.io/crab-companion/)*
 
 <p align="center">
   <img src="docs/icon.png" width="160" alt="Craby, the Crab Companion pixel art crab">
