@@ -25,8 +25,8 @@ E o melhor: quando o Claude pede permissão ou tem uma pergunta, um **balão de 
 - **Perguntas pelo balão** — uma API HTTP local permite que o Claude (ou qualquer script) faça perguntas de múltipla escolha ou texto livre pelo balão, com fallback pro terminal.
 - **Placar multi-sessão** — várias sessões do Claude Code ao mesmo tempo? O caranguejo mostra o estado de maior prioridade entre todas, com pontinhos brancos para sessões trabalhando em paralelo e um tooltip listando o status de cada projeto. Clicar nele ergue a janela do projeto que precisa de você (requer permissão de Acessibilidade).
 - **Sons** — *plim* discreto no terminou, *ping* na atenção. Liga/desliga no menu da barra.
-- **Ele é vivo** — manias espontâneas no ócio (um aceninho, um passinho de lado, uma bolhinha), gota de esforço quando a tarefa demora, soneca quando nada acontece e comemoração com confete quando sobe de nível. No primeiro uso, ele se apresenta.
-- **Estatísticas e níveis** — o menu da barra mostra o dia (tarefas concluídas, projetos, tempo trabalhado), os últimos eventos e o nível do Craby: ele cresce de *filhote* a *lenda* conforme as tarefas acumulam. E avisa quando sai versão nova.
+- **Ele é vivo** — os olhos dele seguem seu mouse pela tela, ele tem manias espontâneas no ócio (um aceninho, um passinho de lado, uma bolhinha), gota de esforço quando a tarefa demora, soneca quando nada acontece e comemoração com confete quando sobe de nível. Do nível 3 em diante, exibe a patente na cabeça: capacete de obra → chapéu de mestre → coroa. No primeiro uso, ele se apresenta.
+- **Estatísticas e níveis** — o menu da barra mostra o dia (tarefas concluídas, projetos, tempo trabalhado), sua sequência de dias e os últimos eventos — clique num deles pra pular pra janela daquele projeto. O nível do Craby cresce de *filhote* a *lenda* conforme as tarefas acumulam, e o menu avisa quando sai versão nova.
 - **Aviso no celular quando você está longe** — opcional: se ninguém mexe no Mac há 2 minutos e o Claude precisa de você, o Craby avisa seu celular via [ntfy](https://ntfy.sh) (veja Configuração).
 - **Arraste pra onde quiser** — pegue e solte o Craby em qualquer lugar; a posição fica salva. Atalhos no balão também: clique nele e aperte 1/2/3 pra escolher ou Esc pro terminal.
 - **Sprites customizados** — os sprites são grades de caracteres; um `sprites.json` na pasta de configuração troca o visual inteiro (gato? polvo? PRs bem-vindos).
@@ -103,6 +103,18 @@ Tudo opcional, tudo em `~/Library/Application Support/Craby/`:
 - `config.json` — aviso no celular quando ausente: `{"ntfyTopic": "seu-topico-secreto"}`. Assine o mesmo tópico no [app do ntfy](https://ntfy.sh); o Craby publica lá quando o Claude precisa de você e o Mac está parado há 2+ minutos.
 - `sprites.json` — troque o visual: `{"states": {"idle": [[14 strings de 14 chars], …], …}, "palette": {"R": "#e8593d"}}`. Estados omitidos mantêm a arte padrão; grades inválidas são ignoradas.
 - `stats.json` — a memória do Craby (tarefas, tempo, eventos). Apague pra resetar o nível dele.
+
+## Funciona com qualquer agente
+
+Os hooks do Claude Code são só um cliente — a API HTTP é agnóstica. Qualquer coisa que rode `curl` pode controlar o Craby: Codex CLI, Gemini CLI, cron, scripts de CI, builds longos. A integração mais simples é o [`examples/craby-run`](examples/craby-run), um wrapper que marca a sessão como trabalhando, roda seu comando e comemora (ou pede atenção se falhar):
+
+```bash
+cp examples/craby-run /usr/local/bin/
+craby-run npm run build
+craby-run codex exec "refatore os testes"
+```
+
+Pra integrações mais profundas, use os endpoints diretamente — veja a tabela acima.
 
 ## Deixe o Claude te perguntar pelo caranguejo
 

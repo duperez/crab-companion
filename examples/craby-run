@@ -1,0 +1,25 @@
+#!/bin/bash
+# Envolve QUALQUER comando demorado com o Craby: trabalhando -> terminou.
+# Funciona com qualquer agente/CLI, não só o Claude Code.
+#
+# Uso:    craby-run <comando> [args...]
+# Exemplo: craby-run npm run build
+#          craby-run codex exec "refatore os testes"
+#
+# Instale copiando para o PATH: cp examples/craby-run /usr/local/bin/
+
+S="craby-run-$$"
+P=$(basename "$PWD")
+if command -v jq >/dev/null 2>&1; then
+  P=$(printf %s "$P" | jq -sRr @uri)
+fi
+
+curl -s -m 2 "http://localhost:4923/working?session=$S&project=$P" >/dev/null 2>&1 || true
+"$@"
+STATUS=$?
+if [ "$STATUS" -eq 0 ]; then
+  curl -s -m 2 "http://localhost:4923/done?session=$S&project=$P" >/dev/null 2>&1 || true
+else
+  curl -s -m 2 "http://localhost:4923/attention?session=$S&project=$P" >/dev/null 2>&1 || true
+fi
+exit $STATUS

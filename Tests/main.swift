@@ -29,6 +29,26 @@ for state in PetState.allCases {
 check(isValidFrame(blinking(emptyFx + clawsDown)), "piscada preserva a grade")
 check(isValidFrame(jumping(sparkleFx2, clawsUp)), "pulo preserva a grade")
 
+// --- olhos e acessórios ---
+
+check(eyesLooking(left: true, [".RRWBRRRRWBRR."]) == [".RRBWRRRRBWRR."],
+      "olhos: pupilas viram para a esquerda")
+check(eyesLooking(left: false, [".RRWBRRRRWBRR."]) == [".RRWBRRRRWBRR."],
+      "olhos: direita mantém a arte original")
+
+for level in [1, 3, 5, 6, 99] {
+    for state in PetState.allCases {
+        for (i, frame) in state.frames.enumerated() {
+            check(isValidFrame(overlayAccessory(frame, level: level)),
+                  "acessório nível \(level): \(state.rawValue) quadro \(i) continua 14x14")
+        }
+    }
+}
+check(overlayAccessory(emptyFx + clawsUp, level: 1) == emptyFx + clawsUp,
+      "acessório: nível baixo não altera a arte")
+check(overlayAccessory(emptyFx + clawsUp, level: 6) != emptyFx + clawsUp,
+      "acessório: coroa altera a arte")
+
 // --- prioridade de estados ---
 
 check(PetState.attention.priority > PetState.working.priority, "attention > working")

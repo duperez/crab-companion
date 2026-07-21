@@ -67,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var lastEventAt = Date()
     var availableUpdate: String?
     var updateTimer: Timer?
-    let appVersion = "1.2.2"
+    let appVersion = "1.3.0"
 
     var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -334,6 +334,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         todayItem.isEnabled = false
         menu.addItem(todayItem)
 
+        let streak = stats.streakDays
+        if streak >= 2 {
+            let streakItem = NSMenuItem(title: L.streak(streak), action: nil, keyEquivalent: "")
+            streakItem.isEnabled = false
+            menu.addItem(streakItem)
+        }
+
         let eventsItem = NSMenuItem(title: L.recentEvents, action: nil, keyEquivalent: "")
         let eventsMenu = NSMenu()
         let events = stats.recentEvents()
@@ -351,10 +358,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 case "level": kind = L.levelUp
                 default: kind = L.stateLabel(.attention)
                 }
+                // clicar num evento foca a janela daquele projeto
                 let item = NSMenuItem(
                     title: "\(formatter.string(from: event.ts)) · \(event.project) · \(kind)",
-                    action: nil, keyEquivalent: "")
-                item.isEnabled = false
+                    action: #selector(eventClicked(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = event.project
                 eventsMenu.addItem(item)
             }
         }
@@ -401,6 +410,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let quit = NSMenuItem(
             title: L.quit, action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
+    }
+
+    @objc func eventClicked(_ sender: NSMenuItem) {
+        guard let project = sender.representedObject as? String, project != "Craby",
+              project != "?"
+        else { return }
+        focusSession(project: project)
     }
 
     @objc func toggleFloating() {
@@ -896,15 +912,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func render() {
-        let base = quirk.isEmpty
+        var grid = quirk.isEmpty
             ? state.frames[frameIndex]
             : quirk[min(quirkIndex, quirk.count - 1)]
-        let grid = overlaySweat(overlayBadges(base))
+        // olhos seguem o mouse (menos no laptop, onde ele está concentrado)
+        var lookingLeft = false
+        if state != .working {
+            lookingLeft = NSEvent.mouseLocation.x < window.frame.midX
+            grid = eyesLooking(left: lookingLeft, grid)
+        }
+        let level = stats.level.number
+        grid = overlaySweat(overlayBadges(overlayAccessory(grid, level: level)))
         petView.grid = grid
         petView.needsDisplay = true
         // quadros de mania não entram no cache (são transitórios e variados)
         let key = quirk.isEmpty
-            ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)"
+            ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)-\(lookingLeft ? 1 : 0)-\(level)"
             : nil
         statusItem.button?.image = barImage(for: grid, key: key)
     }

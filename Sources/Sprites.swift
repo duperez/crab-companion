@@ -176,6 +176,43 @@ func shifted(_ grid: [String], dx: Int) -> [String] {
     }
 }
 
+// olhos acompanham o mouse: pupila troca de lado quando ele está à esquerda
+func eyesLooking(left: Bool, _ grid: [String]) -> [String] {
+    guard left else { return grid }
+    return grid.map { $0.replacingOccurrences(of: "WB", with: "BW") }
+}
+
+// acessórios de nível: o Craby exibe sua patente na cabeça
+// (3-4: capacete de obra; 5: chapéu de mestre; 6+: coroa de lenda)
+func overlayAccessory(_ grid: [String], level: Int) -> [String] {
+    guard level >= 3 else { return grid }
+    guard let headIdx = grid.firstIndex(where: { $0.contains("RRRRRRRRRR") }),
+          headIdx >= 1,
+          let firstR = grid[headIdx].firstIndex(of: "R")
+    else { return grid }
+    let s = grid[headIdx].distance(from: grid[headIdx].startIndex, to: firstR)
+    var g = grid
+
+    func paint(_ rowIdx: Int, _ cols: [Int], _ ch: Character) {
+        guard rowIdx >= 0, rowIdx < g.count else { return }
+        var chars = Array(g[rowIdx])
+        for c in cols where c >= 0 && c < chars.count { chars[c] = ch }
+        g[rowIdx] = String(chars)
+    }
+
+    switch level {
+    case 3, 4:
+        paint(headIdx - 1, Array((s + 1)...(s + 8)), "Y")
+    case 5:
+        paint(headIdx - 1, Array(s...(s + 9)), "G")
+        paint(headIdx - 2, Array((s + 3)...(s + 6)), "G")
+    default:
+        paint(headIdx - 1, Array((s + 2)...(s + 7)), "Y")
+        paint(headIdx - 2, [s + 2, s + 4, s + 6], "Y")
+    }
+    return g
+}
+
 // pulo: desloca o caranguejo uma linha pra cima dentro da grade
 func jumping(_ fx: [String], _ crab: [String]) -> [String] {
     Array(fx.dropLast()) + crab + [String(repeating: ".", count: gridCols)]

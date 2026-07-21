@@ -25,8 +25,8 @@ And the best part: when Claude asks for permission or has a question, a **speech
 - **Ask the user anything** — a local HTTP API lets Claude (or any script) ask multiple-choice or free-text questions through the bubble, with graceful fallback to the terminal.
 - **Multi-session scoreboard** — running several Claude Code sessions? The crab shows the highest-priority state across all of them, with white dots for parallel working sessions and a tooltip listing each project's status. Clicking the crab raises the window of the project that needs you (requires Accessibility permission).
 - **Sounds** — subtle *pling* on done, *ping* on attention. Toggle in the menu bar menu.
-- **He's alive** — spontaneous idle quirks (a little wave, a side-step, blowing a bubble), a sweat drop when a task runs long, a nap when nothing happens, and a confetti celebration when he levels up. On first launch he introduces himself.
-- **Daily stats and levels** — the menu bar shows what happened today (tasks finished, projects, time worked), the last events, and Craby's level: he grows from *hatchling* to *legend* as tasks pile up. It also tells you when a new version is out.
+- **He's alive** — his eyes follow your mouse around the screen, he has spontaneous idle quirks (a little wave, a side-step, blowing a bubble), a sweat drop when a task runs long, a nap when nothing happens, and a confetti celebration when he levels up. From level 3 he wears his rank on his head: hard hat → master's hat → crown. On first launch he introduces himself.
+- **Daily stats and levels** — the menu bar shows what happened today (tasks finished, projects, time worked), your day streak, and the last events — click one to jump to that project's window. Craby's level grows from *hatchling* to *legend* as tasks pile up, and the menu tells you when a new version is out.
 - **Phone alerts when you're away** — optional: if nobody touches the Mac for 2 minutes and Claude needs you, Craby pings your phone via [ntfy](https://ntfy.sh) (see Configuration).
 - **Drag him anywhere** — grab and drop Craby wherever you like; the position is remembered. Bubble shortcuts too: click a bubble, then press 1/2/3 to choose or Esc for the terminal.
 - **Custom sprite packs** — the sprites are character grids; drop a `sprites.json` next to his config to reskin Craby entirely (cat? octopus? PRs welcome).
@@ -103,6 +103,18 @@ Everything optional, all in `~/Library/Application Support/Craby/`:
 - `config.json` — phone alerts for when you're away: `{"ntfyTopic": "your-secret-topic"}`. Subscribe to the same topic in the [ntfy app](https://ntfy.sh); Craby posts there when Claude needs you and the Mac has been idle for 2+ minutes.
 - `sprites.json` — reskin Craby: `{"states": {"idle": [[14 strings of 14 chars], …], …}, "palette": {"R": "#e8593d"}}`. States you omit keep the default art; invalid grids are ignored.
 - `stats.json` — Craby's memory (tasks, time worked, events). Delete it to reset his level.
+
+## Works with any agent
+
+The Claude Code hooks are just one client — the HTTP API is agent-agnostic. Anything that can `curl` can drive Craby: Codex CLI, Gemini CLI, cron jobs, CI scripts, long builds. The simplest integration is [`examples/craby-run`](examples/craby-run), a wrapper that marks a session as working, runs your command, and celebrates (or asks for attention on failure):
+
+```bash
+cp examples/craby-run /usr/local/bin/
+craby-run npm run build
+craby-run codex exec "refactor the tests"
+```
+
+For deeper integrations, hit the endpoints directly — see the table above.
 
 ## Let Claude ask you questions through the crab
 

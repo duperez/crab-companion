@@ -39,6 +39,9 @@ enum L {
     }
 
     static var levelUp: String { tr("leveled up!", "subiu de nível!") }
+    static func streak(_ days: Int) -> String {
+        tr("🔥 \(days)-day streak", "🔥 \(days) dias seguidos")
+    }
     static var about: String { tr("About Craby", "Sobre o Craby") }
     static func updateAvailable(_ v: String) -> String {
         tr("Update available: v\(v)", "Atualização disponível: v\(v)")

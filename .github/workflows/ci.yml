@@ -25,4 +25,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Shellcheck
-        run: shellcheck install.sh uninstall.sh setup.sh package.sh ask.sh notify.sh
+        run: shellcheck install.sh uninstall.sh setup.sh package.sh ask.sh notify.sh examples/craby-run
