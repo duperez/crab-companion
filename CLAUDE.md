@@ -10,13 +10,13 @@ Se o usuário pedir para instalar/configurar, rode:
 ./install.sh
 ```
 
-Isso compila, monta `~/Applications/Crab Companion.app`, registra o LaunchAgent `com.crab-companion.pet` (inicia no login) e adiciona os hooks ao `~/.claude/settings.json` (com backup em `settings.json.crab-backup`; eventos que já tenham hooks do usuário são pulados — nesse caso, mostre ao usuário o hook que faltou e ofereça mesclar manualmente). Depois, peça ao usuário para reiniciar sessões abertas do Claude Code.
+Isso compila, monta `~/Applications/Craby.app`, registra o LaunchAgent `com.crab-companion.pet` (inicia no login) e adiciona os hooks ao `~/.claude/settings.json` (com backup em `settings.json.crab-backup`; eventos que já tenham hooks do usuário são pulados — nesse caso, mostre ao usuário o hook que faltou e ofereça mesclar manualmente). Depois, peça ao usuário para reiniciar sessões abertas do Claude Code.
 
 Verificação pós-install:
 
 ```bash
 curl -s localhost:4923/done   # caranguejo comemora; deve responder "ok"
-pgrep -fl "Crab Companion"    # processo vivo
+pgrep -fl "Craby.app"         # processo vivo
 ```
 
 Requisitos que podem faltar: `xcode-select --install` (swiftc), `brew install jq`.

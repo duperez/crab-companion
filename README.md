@@ -37,7 +37,7 @@ cd crab-companion
 ./install.sh
 ```
 
-The installer compiles the app (~300 KB, zero dependencies), installs it to `~/Applications/Crab Companion.app`, registers a LaunchAgent so it starts at login, and adds the Claude Code hooks to `~/.claude/settings.json` (your previous config is backed up, and existing hooks on the same events are never overwritten).
+The installer compiles the app (~300 KB, zero dependencies), installs it to `~/Applications/Craby.app`, registers a LaunchAgent so it starts at login, and adds the Claude Code hooks to `~/.claude/settings.json` (your previous config is backed up, and existing hooks on the same events are never overwritten).
 
 Restart any open Claude Code sessions and you're done. To remove everything: `./uninstall.sh`.
 

@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="$HOME/Applications/Crab Companion.app"
+APP="$HOME/Applications/Craby.app"
 PLIST="$HOME/Library/LaunchAgents/com.crab-companion.pet.plist"
 LABEL="com.crab-companion.pet"
 SETTINGS="$HOME/.claude/settings.json"
@@ -44,7 +44,7 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key><string>com.crab-companion.pet</string>
-    <key>CFBundleName</key><string>Crab Companion</string>
+    <key>CFBundleName</key><string>Craby</string>
     <key>CFBundleExecutable</key><string>pet</string>
     <key>CFBundleIconFile</key><string>crab</string>
     <key>CFBundlePackageType</key><string>APPL</string>
