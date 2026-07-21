@@ -132,9 +132,48 @@ let laptopRight = [
     "..............",
 ]
 
+// dormindo: "Zzz" flutuando (dois quadros, o Z sobe)
+let sleepFx1 = [
+    "..........WWW.",
+    "...........W..",
+    "..........WWW.",
+    "..............",
+]
+
+let sleepFx2 = [
+    "......WWW.....",
+    ".......W......",
+    "......WWW.....",
+    "..............",
+]
+
+// confete de level-up: pixels coloridos caindo
+let confettiFx1 = [
+    "Y..C....W..Y..",
+    ".C....Y....C..",
+    "..W..C...Y....",
+    "..............",
+]
+
+let confettiFx2 = [
+    ".C...Y...C..W.",
+    "Y...W...Y.....",
+    "...C...W...C..",
+    "..............",
+]
+
 // olhos fechados (piscada): troca branco+pupila por pálpebras escuras
 func blinking(_ crab: [String]) -> [String] {
     crab.map { $0.replacingOccurrences(of: "WB", with: "DD") }
+}
+
+// desloca a grade 1 pixel para o lado (passinho de caranguejo)
+func shifted(_ grid: [String], dx: Int) -> [String] {
+    grid.map { row in
+        if dx > 0 { return "." + row.dropLast() }
+        if dx < 0 { return row.dropFirst() + "." }
+        return row
+    }
 }
 
 // pulo: desloca o caranguejo uma linha pra cima dentro da grade
@@ -150,6 +189,7 @@ let defaultPalette: [Character: NSColor] = [
     "Y": NSColor(red: 1.0, green: 0.82, blue: 0.15, alpha: 1.0),
     "G": NSColor(red: 0.35, green: 0.39, blue: 0.45, alpha: 1.0),
     "L": NSColor(red: 0.60, green: 0.65, blue: 0.71, alpha: 1.0),
+    "C": NSColor(red: 0.31, green: 0.76, blue: 0.97, alpha: 1.0),
 ]
 
 // ---------------------------------------------------------------------------
@@ -210,7 +250,7 @@ func paletteColor(_ ch: Character) -> NSColor? {
 // ---------------------------------------------------------------------------
 
 enum PetState: String, CaseIterable {
-    case idle, working, done, attention
+    case idle, working, done, attention, sleeping
 
     var frames: [[String]] {
         if let custom = customFrames[rawValue] { return custom }
@@ -233,6 +273,9 @@ enum PetState: String, CaseIterable {
                 exclaimFx + clawsUp,
                 emptyFx + leftUpRightDown,
             ]
+        case .sleeping:
+            let asleep = blinking(clawsDown)
+            return [sleepFx1 + asleep, sleepFx2 + asleep]
         }
     }
 
@@ -242,6 +285,7 @@ enum PetState: String, CaseIterable {
         case .working: return 0.2
         case .done: return 0.4
         case .attention: return 0.35
+        case .sleeping: return 1.2
         }
     }
 
@@ -251,10 +295,40 @@ enum PetState: String, CaseIterable {
         case .attention: return 3
         case .working: return 2
         case .done: return 1
-        case .idle: return 0
+        case .idle, .sleeping: return 0
         }
     }
 }
+
+// manias espontâneas do ócio: sequências curtas de quadros tocadas uma vez
+let idleQuirks: [[[String]]] = [
+    // aceninho
+    [emptyFx + rightUpLeftDown, emptyFx + clawsUp, emptyFx + rightUpLeftDown],
+    // passinho de lado
+    [
+        emptyFx + shifted(clawsDown, dx: 1),
+        emptyFx + shifted(clawsUp, dx: 1),
+        emptyFx + shifted(clawsDown, dx: -1),
+        emptyFx + shifted(clawsUp, dx: -1),
+        emptyFx + clawsDown,
+    ],
+    // bolhinha subindo
+    [
+        ["..............", "..............", "......C.......", ".............."] + clawsUp,
+        ["..............", "......C.......", "..............", ".............."] + clawsUp,
+        ["......C.......", "..............", "..............", ".............."] + clawsUp,
+    ],
+]
+
+// comemoração de level-up: confete + pulos
+let levelUpFrames: [[String]] = [
+    confettiFx1 + clawsUp,
+    jumping(confettiFx2, clawsUp),
+    confettiFx2 + clawsUp,
+    jumping(confettiFx1, clawsUp),
+    confettiFx1 + clawsUp,
+    jumping(confettiFx2, clawsUp),
+]
 
 func drawGrid(_ grid: [String], pixel: CGFloat, height: CGFloat) {
     for (row, line) in grid.enumerated() {

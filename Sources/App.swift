@@ -50,9 +50,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // estado por sessão do Claude Code (multi-sessão)
     var sessions: [String: SessionInfo] = [:]
 
-    // fila de pedidos de permissão/pergunta
-    var askQueue: [(payload: AskPayload, conn: NWConnection)] = []
-    var currentAsk: (payload: AskPayload, conn: NWConnection)?
+    // fila de pedidos de permissão/pergunta (conn nil = balão informativo local)
+    var askQueue: [(payload: AskPayload, conn: NWConnection?)] = []
+    var currentAsk: (payload: AskPayload, conn: NWConnection?)?
     var bubbleWindow: NSWindow?
     var inputField: NSTextField?
     var askTimeout: DispatchWorkItem?
@@ -60,6 +60,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var stats: StatsStore!
     var config = CrabyConfig()
     var authToken = ""
+
+    // personalidade: manias do ócio, sono, atualização
+    var quirk: [[String]] = []
+    var quirkIndex = 0
+    var lastEventAt = Date()
+    var availableUpdate: String?
+    var updateTimer: Timer?
+    let appVersion = "1.2.0"
 
     var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -115,8 +123,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         applyState(.idle)
 
         // reavalia sessões periodicamente (comemoração expira, sessões mortas somem)
+        // e dá chance das manias do ócio acontecerem
         maintenanceTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) {
-            [weak self] _ in self?.recomputeDisplayed()
+            [weak self] _ in
+            self?.recomputeDisplayed()
+            self?.maybeQuirk()
         }
 
         do {
@@ -124,11 +135,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 port: 4923,
                 authToken: authToken,
                 onCommand: { [weak self] command, query in
-                    guard let self else { return }
-                    if command == "quit" { NSApp.terminate(nil); return }
+                    guard let self else { return nil }
+                    if command == "quit" { NSApp.terminate(nil); return nil }
+                    if command == "status" { return self.statusJSON() }
                     if command.hasPrefix("answer/") {
                         self.answerCurrentAsk(String(command.dropFirst("answer/".count)))
-                        return
+                        return nil
                     }
                     if let newState = PetState(rawValue: command) {
                         self.sessionEvent(
@@ -136,6 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                             session: query["session"] ?? "default",
                             project: query["project"])
                     }
+                    return nil
                 },
                 onAsk: { [weak self] payload, conn in
                     guard let self else { return }
@@ -146,6 +159,87 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } catch {
             NSLog("craby: falha ao abrir porta 4923: \(error)")
         }
+
+        // primeira execução: Craby se apresenta
+        if !UserDefaults.standard.bool(forKey: "onboarded") {
+            UserDefaults.standard.set(true, forKey: "onboarded")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                guard let self else { return }
+                self.askQueue.append((
+                    AskPayload(
+                        title: L.welcomeTitle, detail: L.welcomeDetail,
+                        urgent: false, options: [L.welcomeOk], input: nil),
+                    nil))
+                if self.currentAsk == nil { self.showNextAsk() }
+            }
+        }
+
+        checkForUpdates()
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) {
+            [weak self] _ in self?.checkForUpdates()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Atualizações: consulta o último release no GitHub (diário)
+    // ------------------------------------------------------------------
+
+    func checkForUpdates() {
+        guard let url = URL(
+            string: "https://api.github.com/repos/duperez/crab-companion/releases/latest")
+        else { return }
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+            guard let self, let data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let tag = json["tag_name"] as? String
+            else { return }
+            let remote = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+            if Self.isVersion(remote, newerThan: self.appVersion) {
+                DispatchQueue.main.async { self.availableUpdate = remote }
+            }
+        }.resume()
+    }
+
+    static func isVersion(_ a: String, newerThan b: String) -> Bool {
+        let pa = a.split(separator: ".").compactMap { Int($0) }
+        let pb = b.split(separator: ".").compactMap { Int($0) }
+        for i in 0..<max(pa.count, pb.count) {
+            let x = i < pa.count ? pa[i] : 0
+            let y = i < pb.count ? pb[i] : 0
+            if x != y { return x > y }
+        }
+        return false
+    }
+
+    @objc func openReleases() {
+        NSWorkspace.shared.open(
+            URL(string: "https://github.com/duperez/crab-companion/releases")!)
+    }
+
+    @objc func openHomepage() {
+        NSWorkspace.shared.open(URL(string: "https://duperez.github.io/crab-companion/")!)
+    }
+
+    // GET /status: visão de dentro do Craby (debug e integrações)
+    func statusJSON() -> String {
+        let sessionList = sessions.map { key, info in
+            [
+                "session": key,
+                "project": info.project ?? "",
+                "state": info.state.rawValue,
+            ]
+        }
+        let payload: [String: Any] = [
+            "version": appVersion,
+            "displayed": state.rawValue,
+            "level": stats.level.number,
+            "totalTasks": stats.data.totalTasks,
+            "sessions": sessionList,
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let json = String(data: data, encoding: .utf8)
+        else { return "{}" }
+        return json
     }
 
     // ------------------------------------------------------------------
@@ -251,8 +345,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let formatter = DateFormatter()
             formatter.dateFormat = "HH:mm"
             for event in events {
-                let kind = event.kind == "done"
-                    ? L.stateLabel(.done) : L.stateLabel(.attention)
+                let kind: String
+                switch event.kind {
+                case "done": kind = L.stateLabel(.done)
+                case "level": kind = L.levelUp
+                default: kind = L.stateLabel(.attention)
+                }
                 let item = NSMenuItem(
                     title: "\(formatter.string(from: event.ts)) · \(event.project) · \(kind)",
                     action: nil, keyEquivalent: "")
@@ -285,6 +383,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             action: nil, keyEquivalent: "")
         remote.isEnabled = false
         menu.addItem(remote)
+
+        if let update = availableUpdate {
+            let item = NSMenuItem(
+                title: "🆕 " + L.updateAvailable(update),
+                action: #selector(openReleases), keyEquivalent: "")
+            item.target = self
+            menu.addItem(item)
+        }
+
+        let about = NSMenuItem(
+            title: L.about, action: #selector(openHomepage), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
 
         menu.addItem(NSMenuItem.separator())
         let quit = NSMenuItem(
@@ -346,6 +457,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func sessionEvent(_ newState: PetState, session: String, project: String? = nil) {
         let now = Date()
+        lastEventAt = now // qualquer evento acorda o Craby
         let existing = sessions[session]
         let proj = project ?? existing?.project
         var workingSince = existing?.workingSince
@@ -359,7 +471,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             workingSince = nil
         }
         if newState == .done {
+            let levelBefore = stats.level.number
             stats.recordDone(project: proj ?? "?")
+            if stats.level.number > levelBefore { celebrateLevelUp() }
         }
         if newState == .attention {
             stats.recordAttention(project: proj ?? "?")
@@ -390,8 +504,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for (key, info) in sessions where info.state == .done {
             if now.timeIntervalSince(info.at) > 30 { sessions[key]?.state = .idle }
         }
-        let displayed = sessions.values.map(\.state).max(by: { $0.priority < $1.priority })
+        var displayed = sessions.values.map(\.state).max(by: { $0.priority < $1.priority })
             ?? .idle
+        // tudo quieto há 10min? Craby dorme (qualquer evento o acorda)
+        if displayed == .idle, now.timeIntervalSince(lastEventAt) > 600 {
+            displayed = .sleeping
+        }
         updateTooltip()
         if displayed != state {
             playSound(for: displayed)
@@ -434,6 +552,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for i in 0..<min(count, 4) { row[i * 2] = "W" }
         g[0] = String(row)
         return g
+    }
+
+    // gota de esforço: aparece após 1min contínuo de trabalho
+    private var isSweating: Bool {
+        guard state == .working,
+              let oldest = sessions.values.compactMap({ $0.workingSince }).min()
+        else { return false }
+        return Date().timeIntervalSince(oldest) > 60
+    }
+
+    private func overlaySweat(_ grid: [String]) -> [String] {
+        guard isSweating else { return grid }
+        var g = grid
+        var row = Array(g[2])
+        row[12] = "C"
+        g[2] = String(row)
+        return g
+    }
+
+    // ------------------------------------------------------------------
+    // Personalidade: manias do ócio e comemoração de level-up
+    // ------------------------------------------------------------------
+
+    func startQuirk(_ frames: [[String]]) {
+        quirk = frames
+        quirkIndex = 0
+        render()
+    }
+
+    func maybeQuirk() {
+        guard state == .idle, quirk.isEmpty, currentAsk == nil,
+              Int.random(in: 0..<6) == 0,
+              let chosen = idleQuirks.randomElement()
+        else { return }
+        startQuirk(chosen)
+    }
+
+    func celebrateLevelUp() {
+        stats.recordLevelUp()
+        if soundsEnabled { NSSound(named: "Funk")?.play() }
+        startQuirk(levelUpFrames + levelUpFrames)
     }
 
     // ------------------------------------------------------------------
@@ -479,14 +638,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard currentAsk == nil, !askQueue.isEmpty else { return }
         currentAsk = askQueue.removeFirst()
 
-        // extrai "[projeto]" do título, se houver, para o registro de eventos
-        let title = currentAsk!.payload.title
-        var project: String?
-        if let open = title.firstIndex(of: "["), let close = title.firstIndex(of: "]"),
-           open < close {
-            project = String(title[title.index(after: open)..<close])
+        // balões informativos locais (conn nil) não mexem no placar nem nas stats
+        if currentAsk!.conn != nil {
+            // extrai "[projeto]" do título, se houver, para o registro de eventos
+            let title = currentAsk!.payload.title
+            var project: String?
+            if let open = title.firstIndex(of: "["), let close = title.firstIndex(of: "]"),
+               open < close {
+                project = String(title[title.index(after: open)..<close])
+            }
+            sessionEvent(.attention, session: "ask", project: project)
         }
-        sessionEvent(.attention, session: "ask", project: project)
         showBubble(for: currentAsk!.payload)
 
         // se ninguém interagir, devolve "ask" -> prompt normal no terminal
@@ -509,12 +671,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard valid else { return }
         askTimeout?.cancel()
         askTimeout = nil
-        ControlServer.respond(current.conn, body: answer)
+        if let conn = current.conn {
+            ControlServer.respond(conn, body: answer)
+        }
         bubbleWindow?.orderOut(nil)
         bubbleWindow = nil
         inputField = nil
         currentAsk = nil
-        sessionEvent(.working, session: "ask")
+        if current.conn != nil {
+            sessionEvent(.working, session: "ask")
+        }
         showNextAsk()
     }
 
@@ -704,26 +870,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func applyState(_ newState: PetState) {
         state = newState
         frameIndex = 0
+        quirk = []
+        quirkIndex = 0
         animTimer?.invalidate()
         animTimer = Timer.scheduledTimer(withTimeInterval: newState.interval, repeats: true) {
             [weak self] _ in
             guard let self else { return }
-            self.frameIndex = (self.frameIndex + 1) % self.state.frames.count
+            if !self.quirk.isEmpty {
+                self.quirkIndex += 1
+                if self.quirkIndex >= self.quirk.count {
+                    self.quirk = []
+                    self.quirkIndex = 0
+                    self.frameIndex = 0
+                }
+            } else {
+                self.frameIndex = (self.frameIndex + 1) % self.state.frames.count
+            }
             self.render()
         }
         render()
     }
 
     private func render() {
-        let grid = overlayBadges(state.frames[frameIndex])
+        let base = quirk.isEmpty
+            ? state.frames[frameIndex]
+            : quirk[min(quirkIndex, quirk.count - 1)]
+        let grid = overlaySweat(overlayBadges(base))
         petView.grid = grid
         petView.needsDisplay = true
-        let key = "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))"
+        // quadros de mania não entram no cache (são transitórios e variados)
+        let key = quirk.isEmpty
+            ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)"
+            : nil
         statusItem.button?.image = barImage(for: grid, key: key)
     }
 
-    private func barImage(for grid: [String], key: String) -> NSImage {
-        if let cached = barImageCache[key] { return cached }
+    private func barImage(for grid: [String], key: String?) -> NSImage {
+        if let key, let cached = barImageCache[key] { return cached }
         let size = NSSize(
             width: CGFloat(gridCols) * barPixelSize,
             height: CGFloat(gridRows) * barPixelSize)
@@ -731,7 +914,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         image.lockFocus()
         drawGrid(grid, pixel: barPixelSize, height: size.height)
         image.unlockFocus()
-        barImageCache[key] = image
+        if let key { barImageCache[key] = image }
         return image
     }
 }

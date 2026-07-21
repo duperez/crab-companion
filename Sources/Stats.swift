@@ -69,6 +69,10 @@ final class StatsStore {
         appendEvent(project: project, kind: "attention")
     }
 
+    func recordLevelUp() {
+        appendEvent(project: "Craby", kind: "level")
+    }
+
     func addWork(project: String, seconds: Double) {
         guard seconds > 0, seconds < 12 * 3600 else { return } // descarta absurdos
         var day = today

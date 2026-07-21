@@ -10,7 +10,7 @@
 
 You send Claude Code off to work on something long, switch to another app, and… now what? Keep alt-tabbing to check? Craby solves the "is it done yet?" problem by always being in the corner of your eye:
 
-- 😴 **Idle** — claws up, tapping slowly, blinking now and then
+- 😴 **Idle** — claws up, tapping slowly, blinking now and then (and when everything stays quiet for 10 minutes, he falls asleep — Zzz)
 - 💻 **Working** — hunched over a tiny laptop, claws hammering the keyboard, keys flying
 - 🎉 **Done** — jumping between sparkles (with an optional *pling*)
 - ❗ **Needs you** — waving at you with a blinking "!" (with an optional *ping*)
@@ -25,7 +25,8 @@ And the best part: when Claude asks for permission or has a question, a **speech
 - **Ask the user anything** — a local HTTP API lets Claude (or any script) ask multiple-choice or free-text questions through the bubble, with graceful fallback to the terminal.
 - **Multi-session scoreboard** — running several Claude Code sessions? The crab shows the highest-priority state across all of them, with white dots for parallel working sessions and a tooltip listing each project's status. Clicking the crab raises the window of the project that needs you (requires Accessibility permission).
 - **Sounds** — subtle *pling* on done, *ping* on attention. Toggle in the menu bar menu.
-- **Daily stats and levels** — the menu bar shows what happened today (tasks finished, projects, time worked), the last events, and Craby's level: he grows from *hatchling* to *legend* as tasks pile up.
+- **He's alive** — spontaneous idle quirks (a little wave, a side-step, blowing a bubble), a sweat drop when a task runs long, a nap when nothing happens, and a confetti celebration when he levels up. On first launch he introduces himself.
+- **Daily stats and levels** — the menu bar shows what happened today (tasks finished, projects, time worked), the last events, and Craby's level: he grows from *hatchling* to *legend* as tasks pile up. It also tells you when a new version is out.
 - **Phone alerts when you're away** — optional: if nobody touches the Mac for 2 minutes and Claude needs you, Craby pings your phone via [ntfy](https://ntfy.sh) (see Configuration).
 - **Drag him anywhere** — grab and drop Craby wherever you like; the position is remembered. Bubble shortcuts too: click a bubble, then press 1/2/3 to choose or Esc for the terminal.
 - **Custom sprite packs** — the sprites are character grids; drop a `sprites.json` next to his config to reskin Craby entirely (cat? octopus? PRs welcome).
@@ -86,6 +87,7 @@ Anything on your machine can talk to the crab:
 | `POST /ask` `{"title","detail","urgent"}` | permission bubble (Allow/Deny/Terminal), long-polls until click |
 | `POST /ask` `{...,"options":["A","B"]}` | multiple-choice bubble → answers `opt:0`, `opt:1`… |
 | `POST /ask` `{...,"input":true}` | free-text bubble → answers `txt:<typed text>` |
+| `GET /status` | JSON with version, displayed state, level and per-session states |
 | `GET /answer/<allow\|deny\|ask\|opt:N\|txt:...>` | answer the current bubble programmatically (**token required**) |
 | `GET /quit` | quit the app (**token required**) |
 

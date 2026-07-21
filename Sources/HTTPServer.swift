@@ -34,12 +34,13 @@ struct HTTPRequest {
 final class ControlServer {
     let listener: NWListener
     let authToken: String
-    let onCommand: (String, [String: String]) -> Void // (comando, query)
+    // (comando, query) -> corpo da resposta (nil = "ok")
+    let onCommand: (String, [String: String]) -> String?
     let onAsk: (AskPayload, NWConnection) -> Void
 
     init(port: UInt16,
          authToken: String,
-         onCommand: @escaping (String, [String: String]) -> Void,
+         onCommand: @escaping (String, [String: String]) -> String?,
          onAsk: @escaping (AskPayload, NWConnection) -> Void) throws {
         self.authToken = authToken
         self.onCommand = onCommand
@@ -88,8 +89,8 @@ final class ControlServer {
             }
         }
 
-        onCommand(command.removingPercentEncoding ?? command, request.query)
-        Self.respond(conn, body: "ok")
+        let reply = onCommand(command.removingPercentEncoding ?? command, request.query)
+        Self.respond(conn, body: reply ?? "ok")
     }
 
     static func respond(_ conn: NWConnection, body: String, status: String = "200 OK") {

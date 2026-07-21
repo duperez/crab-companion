@@ -10,7 +10,7 @@
 
 Você manda o Claude Code trabalhar em algo demorado, troca de aplicativo e… e agora? Fica dando alt-tab pra conferir? O Craby resolve o problema do "já terminou?" ficando sempre no canto do seu olho:
 
-- 😴 **Ocioso** — garras pro alto, tamborilando devagar, piscando de vez em quando
+- 😴 **Ocioso** — garras pro alto, tamborilando devagar, piscando de vez em quando (e se tudo ficar quieto por 10 minutos, ele dorme — Zzz)
 - 💻 **Trabalhando** — debruçado num laptopzinho, garras martelando o teclado, teclas voando
 - 🎉 **Terminou** — pulando entre faíscas (com um *plim* opcional)
 - ❗ **Precisa de você** — acenando com um "!" piscando (com um *ping* opcional)
@@ -25,7 +25,8 @@ E o melhor: quando o Claude pede permissão ou tem uma pergunta, um **balão de 
 - **Perguntas pelo balão** — uma API HTTP local permite que o Claude (ou qualquer script) faça perguntas de múltipla escolha ou texto livre pelo balão, com fallback pro terminal.
 - **Placar multi-sessão** — várias sessões do Claude Code ao mesmo tempo? O caranguejo mostra o estado de maior prioridade entre todas, com pontinhos brancos para sessões trabalhando em paralelo e um tooltip listando o status de cada projeto. Clicar nele ergue a janela do projeto que precisa de você (requer permissão de Acessibilidade).
 - **Sons** — *plim* discreto no terminou, *ping* na atenção. Liga/desliga no menu da barra.
-- **Estatísticas e níveis** — o menu da barra mostra o dia (tarefas concluídas, projetos, tempo trabalhado), os últimos eventos e o nível do Craby: ele cresce de *filhote* a *lenda* conforme as tarefas acumulam.
+- **Ele é vivo** — manias espontâneas no ócio (um aceninho, um passinho de lado, uma bolhinha), gota de esforço quando a tarefa demora, soneca quando nada acontece e comemoração com confete quando sobe de nível. No primeiro uso, ele se apresenta.
+- **Estatísticas e níveis** — o menu da barra mostra o dia (tarefas concluídas, projetos, tempo trabalhado), os últimos eventos e o nível do Craby: ele cresce de *filhote* a *lenda* conforme as tarefas acumulam. E avisa quando sai versão nova.
 - **Aviso no celular quando você está longe** — opcional: se ninguém mexe no Mac há 2 minutos e o Claude precisa de você, o Craby avisa seu celular via [ntfy](https://ntfy.sh) (veja Configuração).
 - **Arraste pra onde quiser** — pegue e solte o Craby em qualquer lugar; a posição fica salva. Atalhos no balão também: clique nele e aperte 1/2/3 pra escolher ou Esc pro terminal.
 - **Sprites customizados** — os sprites são grades de caracteres; um `sprites.json` na pasta de configuração troca o visual inteiro (gato? polvo? PRs bem-vindos).
@@ -86,6 +87,7 @@ Qualquer coisa na sua máquina pode conversar com o caranguejo:
 | `POST /ask` `{"title","detail","urgent"}` | balão de permissão (Permitir/Negar/Terminal), long-poll até o clique |
 | `POST /ask` `{...,"options":["A","B"]}` | balão de múltipla escolha → responde `opt:0`, `opt:1`… |
 | `POST /ask` `{...,"input":true}` | balão de texto livre → responde `txt:<texto digitado>` |
+| `GET /status` | JSON com versão, estado exibido, nível e estados por sessão |
 | `GET /answer/<allow\|deny\|ask\|opt:N\|txt:...>` | responde o balão atual programaticamente (**exige token**) |
 | `GET /quit` | encerra o app (**exige token**) |
 

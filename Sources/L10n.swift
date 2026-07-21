@@ -34,8 +34,21 @@ enum L {
         case .working: return tr("working", "trabalhando")
         case .done: return tr("done", "terminou")
         case .attention: return tr("needs you", "precisa de você")
+        case .sleeping: return tr("sleeping", "dormindo")
         }
     }
+
+    static var levelUp: String { tr("leveled up!", "subiu de nível!") }
+    static var about: String { tr("About Craby", "Sobre o Craby") }
+    static func updateAvailable(_ v: String) -> String {
+        tr("Update available: v\(v)", "Atualização disponível: v\(v)")
+    }
+    static var welcomeTitle: String { tr("Hi! I'm Craby 🦀", "Oi! Eu sou o Craby 🦀") }
+    static var welcomeDetail: String {
+        tr("I'll show you what Claude Code is up to. Click me to acknowledge alerts, drag me anywhere, right-click to quit.",
+           "Vou te mostrar o que o Claude Code está fazendo. Clique em mim pra reconhecer avisos, arraste pra me mover, clique direito pra sair.")
+    }
+    static var welcomeOk: String { tr("Got it!", "Entendi!") }
 
     static func workingFor(_ minutes: Int) -> String {
         tr("working for \(minutes)min", "trabalhando há \(minutes)min")
