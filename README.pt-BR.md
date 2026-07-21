@@ -70,6 +70,7 @@ O Claude Code dispara [hooks](https://code.claude.com/docs/en/hooks) em eventos 
 | Evento do hook | Reação do caranguejo |
 |---|---|
 | `UserPromptSubmit` | senta no laptop e digita |
+| `PostToolUse` | batimento cardíaco — mantém o "trabalhando" vivo (sessão morta vira ociosa após 10 min sem um) |
 | `Stop` | comemora (terminou) |
 | `Notification` | acena pedindo atenção |
 | `PermissionRequest` | abre o balão de decisão e **espera seu clique** |

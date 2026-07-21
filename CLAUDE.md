@@ -28,7 +28,7 @@ Requisitos que podem faltar: `xcode-select --install` (swiftc), `brew install jq
 - `Sources/App.swift` — janela flutuante borderless (todos os Spaces + fullscreen, `.accessory`, arrastável com posição persistida), NSStatusItem animado com menu dinâmico (stats do dia, nível, eventos), balões de permissão/múltipla escolha/texto livre com long-poll e atalhos (1/2/3/Esc com o balão focado), multi-sessão com prioridade, sons, modo ausente via ntfy.
 - `Sources/Stats.swift` — estatísticas diárias, nível do Craby e registro de eventos (`stats.json`).
 - `Sources/L10n.swift` — strings EN/PT (segue o idioma do sistema).
-- `notify.sh` — chamado pelos hooks UserPromptSubmit/Stop/Notification; extrai `session_id` e `cwd` do stdin e faz GET `/{estado}?session=...&project=...`.
+- `notify.sh` — chamado pelos hooks UserPromptSubmit/PostToolUse (heartbeat)/Stop/Notification; extrai `session_id` e `cwd` do stdin e faz GET `/{estado}?session=...&project=...`. Sessões "working" sem evento há 10min são consideradas mortas e viram idle.
 - `ask.sh` — chamado pelo hook PermissionRequest; monta o balão via POST `/ask` e traduz a resposta em decisão (formato: `hookSpecificOutput.decision.behavior` allow/deny + `additionalContext` no deny — NÃO use `permissionDecision`, esse é do PreToolUse).
 - `package.sh` monta `dist/Craby.app`; `setup.sh` (embarcado no bundle) registra LaunchAgent + hooks; `tools/main.swift` renderiza ícone e quadros do GIF de demo.
 

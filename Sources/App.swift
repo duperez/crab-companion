@@ -67,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var lastEventAt = Date()
     var availableUpdate: String?
     var updateTimer: Timer?
-    let appVersion = "1.2.1"
+    let appVersion = "1.2.2"
 
     var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -503,6 +503,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         sessions = sessions.filter { now.timeIntervalSince($0.value.at) < 4 * 3600 }
         for (key, info) in sessions where info.state == .done {
             if now.timeIntervalSince(info.at) > 30 { sessions[key]?.state = .idle }
+        }
+        // trabalho sem batimento (hook PostToolUse) há 10min = sessão morta
+        for (key, info) in sessions where info.state == .working {
+            if now.timeIntervalSince(info.at) > 600 { sessions[key]?.state = .idle }
         }
         var displayed = sessions.values.map(\.state).max(by: { $0.priority < $1.priority })
             ?? .idle

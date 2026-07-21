@@ -70,6 +70,7 @@ Claude Code fires [hooks](https://code.claude.com/docs/en/hooks) on lifecycle ev
 | Hook event | Crab reaction |
 |---|---|
 | `UserPromptSubmit` | starts typing on the laptop |
+| `PostToolUse` | heartbeat — keeps "working" alive (dead sessions go idle after 10 min without one) |
 | `Stop` | celebrates (done) |
 | `Notification` | waves for attention |
 | `PermissionRequest` | opens the decision bubble and **waits for your click** |
