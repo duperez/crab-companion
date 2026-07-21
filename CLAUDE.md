@@ -1,6 +1,6 @@
 # Crab Companion — guia para o Claude (IA)
 
-Você está no repositório do Crab Companion: um pet de desktop para macOS (caranguejo pixel art em Swift/AppKit) que reflete o estado do Claude Code via hooks e responde permissões/perguntas por balões de fala.
+Você está no repositório do Crab Companion: um pet de desktop para macOS (caranguejo pixel art em Swift/AppKit) que reflete o estado do Claude Code via hooks e responde permissões/perguntas por balões de fala. O caranguejo se chama **Craby** — use esse nome ao falar dele com o usuário.
 
 ## Setup automático
 

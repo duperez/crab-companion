@@ -1,21 +1,21 @@
 # 🦀 Crab Companion
 
-> A tiny pixel-art crab that lives on top of your Mac screen and tells you what Claude Code is up to — and lets you answer back without touching the terminal.
+> Meet **Craby** — a tiny pixel-art crab that lives on top of your Mac screen and tells you what Claude Code is up to. And lets you answer back without touching the terminal.
 
 *Leia em [Português](README.pt-BR.md).*
 
 <p align="center">
-  <img src="docs/icon.png" width="160" alt="Crab Companion pixel art icon">
+  <img src="docs/icon.png" width="160" alt="Craby, the Crab Companion pixel art crab">
 </p>
 
-You send Claude Code off to work on something long, switch to another app, and… now what? Keep alt-tabbing to check? Crab Companion solves the "is it done yet?" problem with a companion that's always in the corner of your eye:
+You send Claude Code off to work on something long, switch to another app, and… now what? Keep alt-tabbing to check? Craby solves the "is it done yet?" problem by always being in the corner of your eye:
 
 - 😴 **Idle** — claws up, tapping slowly, blinking now and then
 - 💻 **Working** — hunched over a tiny laptop, claws hammering the keyboard, keys flying
 - 🎉 **Done** — jumping between sparkles (with an optional *pling*)
 - ❗ **Needs you** — waving at you with a blinking "!" (with an optional *ping*)
 
-And the best part: when Claude asks for permission or has a question, a **speech bubble** opens under the crab and you can answer right there.
+And the best part: when Claude asks for permission or has a question, a **speech bubble** opens under Craby and you can answer right there.
 
 ## Features
 

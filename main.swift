@@ -563,7 +563,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateTooltip() {
         let active = sessions.filter { $0.value.state != .idle }
         if active.isEmpty {
-            petView.toolTip = "Claude Pet — tudo calmo"
+            petView.toolTip = "Craby — tudo calmo"
         } else {
             petView.toolTip = active.values
                 .map { "\($0.project ?? "sessão"): \($0.state.labelPt)" }

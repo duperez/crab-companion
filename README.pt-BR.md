@@ -1,21 +1,21 @@
 # 🦀 Crab Companion
 
-> Um caranguejinho em pixel art que vive por cima da tela do seu Mac e te conta o que o Claude Code está fazendo — e deixa você responder sem tocar no terminal.
+> Conheça o **Craby** — um caranguejinho em pixel art que vive por cima da tela do seu Mac e te conta o que o Claude Code está fazendo. E deixa você responder sem tocar no terminal.
 
 *Read in [English](README.md).*
 
 <p align="center">
-  <img src="docs/icon.png" width="160" alt="Ícone pixel art do Crab Companion">
+  <img src="docs/icon.png" width="160" alt="Craby, o caranguejo pixel art do Crab Companion">
 </p>
 
-Você manda o Claude Code trabalhar em algo demorado, troca de aplicativo e… e agora? Fica dando alt-tab pra conferir? O Crab Companion resolve o problema do "já terminou?" com um companheiro que fica sempre no canto do seu olho:
+Você manda o Claude Code trabalhar em algo demorado, troca de aplicativo e… e agora? Fica dando alt-tab pra conferir? O Craby resolve o problema do "já terminou?" ficando sempre no canto do seu olho:
 
 - 😴 **Ocioso** — garras pro alto, tamborilando devagar, piscando de vez em quando
 - 💻 **Trabalhando** — debruçado num laptopzinho, garras martelando o teclado, teclas voando
 - 🎉 **Terminou** — pulando entre faíscas (com um *plim* opcional)
 - ❗ **Precisa de você** — acenando com um "!" piscando (com um *ping* opcional)
 
-E o melhor: quando o Claude pede permissão ou tem uma pergunta, um **balão de fala** abre embaixo do caranguejo e você responde ali mesmo.
+E o melhor: quando o Claude pede permissão ou tem uma pergunta, um **balão de fala** abre embaixo do Craby e você responde ali mesmo.
 
 ## O que ele faz
 
