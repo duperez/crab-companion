@@ -49,6 +49,19 @@ check(overlayAccessory(emptyFx + clawsUp, level: 1) == emptyFx + clawsUp,
 check(overlayAccessory(emptyFx + clawsUp, level: 6) != emptyFx + clawsUp,
       "acessório: coroa altera a arte")
 
+// --- filhotes (ninhada de subagentes) ---
+
+let babyFrames: [(String, [String])] = [
+    ("ovo", babyEgg), ("ovo rachando", babyEggCracking),
+    ("vivo 1", babyAlive1), ("vivo 2", babyAlive2),
+    ("bengala", babyElderly), ("puf 1", babyPoof1), ("puf 2", babyPoof2),
+]
+for (name, frame) in babyFrames {
+    check(isValidBabyFrame(frame), "filhote \(name): grade \(babyRows)x\(babyCols)")
+}
+check(isValidBabyFrame(failedRecolor(babyPoof1)), "puf de erro preserva a grade")
+check(failedRecolor(babyPoof1) != babyPoof1, "puf de erro muda as cores")
+
 // --- prioridade de estados ---
 
 check(PetState.attention.priority > PetState.working.priority, "attention > working")

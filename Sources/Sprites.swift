@@ -11,6 +11,16 @@ let barPixelSize: CGFloat = 1.3 // pixel do ícone da menu bar (~18pt no total)
 let bubbleWidth: CGFloat = 280
 let bubbleHeight: CGFloat = 104
 
+// ninhada (subagentes): filhotes 7x6 numa faixa abaixo do Craby
+let babyCols = 7
+let babyRows = 6
+let babyPixel: CGFloat = 3
+let maxVisibleBabies = 5
+let petAreaHeight: CGFloat = CGFloat(gridRows) * pixelSize // 70
+let petWindowWidth: CGFloat = 124 // 5 filhotes de 21px + espaçamentos
+let petWindowHeight: CGFloat = 94
+let crabOffsetX: CGFloat = (petWindowWidth - CGFloat(gridCols) * pixelSize) / 2
+
 // ---------------------------------------------------------------------------
 // Pixel art: cada string é uma linha, cada caractere um pixel.
 // R corpo, D sombra, W branco do olho, B pupila, Y amarelo (efeitos),
@@ -173,6 +183,106 @@ func shifted(_ grid: [String], dx: Int) -> [String] {
         if dx > 0 { return "." + row.dropLast() }
         if dx < 0 { return row.dropFirst() + "." }
         return row
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Filhotes (subagentes): nascem de um ovo, tamborilam enquanto o subagente
+// roda, se aposentam de bengala e somem num puf de estrelinhas
+// ---------------------------------------------------------------------------
+
+let babyEgg = [
+    "..WWW..",
+    ".WWWWW.",
+    ".WWWWW.",
+    "..WWW..",
+    ".......",
+    ".......",
+]
+
+let babyEggCracking = [
+    "..WWW..",
+    ".WWBWW.",
+    ".WBWWW.",
+    "..WWW..",
+    ".......",
+    ".......",
+]
+
+let babyAlive1 = [
+    "R.....R",
+    ".RRRRR.",
+    ".RBRBR.",
+    ".RRRRR.",
+    ".R.R.R.",
+    ".......",
+]
+
+let babyAlive2 = [
+    ".R...R.",
+    ".RRRRR.",
+    ".RBRBR.",
+    ".RRRRR.",
+    "R.R.R.R",
+    ".......",
+]
+
+// aposentado: olhos cansados e bengala
+let babyElderly = [
+    "R....GG",
+    ".RRRR.G",
+    ".RDRDRG",
+    ".RRRR.G",
+    ".R.R.R.",
+    ".......",
+]
+
+let babyPoof1 = [
+    ".W...W.",
+    "...Y...",
+    ".W...W.",
+    ".......",
+    ".......",
+    ".......",
+]
+
+let babyPoof2 = [
+    "W..Y..W",
+    ".......",
+    "Y.....Y",
+    "W..Y..W",
+    ".......",
+    ".......",
+]
+
+// puf de erro: cinza e vermelho em vez de estrelinhas douradas
+func failedRecolor(_ grid: [String]) -> [String] {
+    grid.map {
+        $0.replacingOccurrences(of: "Y", with: "R")
+            .replacingOccurrences(of: "W", with: "D")
+    }
+}
+
+func isValidBabyFrame(_ frame: [String]) -> Bool {
+    frame.count == babyRows && frame.allSatisfy { $0.count == babyCols }
+}
+
+// desenha uma grade com canto superior-esquerdo em (originX, topY),
+// numa view de altura viewHeight
+func drawGridAt(
+    _ grid: [String], pixel: CGFloat, viewHeight: CGFloat,
+    originX: CGFloat, topY: CGFloat
+) {
+    for (row, line) in grid.enumerated() {
+        for (col, ch) in line.enumerated() {
+            guard let color = paletteColor(ch) else { continue }
+            color.setFill()
+            NSRect(
+                x: originX + CGFloat(col) * pixel,
+                y: viewHeight - topY - CGFloat(row + 1) * pixel,
+                width: pixel, height: pixel
+            ).fill()
+        }
     }
 }
 

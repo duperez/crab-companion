@@ -66,6 +66,11 @@ add_hook UserPromptSubmit \
 # batimento cardíaco: cada uso de ferramenta renova o "trabalhando" da sessão
 add_hook PostToolUse \
   "$(jq -n --arg c "$NOTIFY working" '[{hooks:[{type:"command",command:$c,async:true}]}]')"
+# ninhada: subagentes viram filhotes embaixo do Craby
+add_hook SubagentStart \
+  "$(jq -n --arg c "$NOTIFY subagent-start" '[{hooks:[{type:"command",command:$c,async:true}]}]')"
+add_hook SubagentStop \
+  "$(jq -n --arg c "$NOTIFY subagent-stop" '[{hooks:[{type:"command",command:$c,async:true}]}]')"
 add_hook Stop \
   "$(jq -n --arg c "$NOTIFY done" '[{hooks:[{type:"command",command:$c,async:true}]}]')"
 add_hook Notification \

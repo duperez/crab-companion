@@ -34,6 +34,19 @@ struct CrabyConfig: Codable {
     var ntfyTopic: String?
 }
 
+// filhote = um subagente em execução (hooks SubagentStart/SubagentStop)
+enum BabyPhase {
+    case hatching, alive, elderly, poof
+}
+
+struct Baby {
+    var phase: BabyPhase = .hatching
+    var tick = 0 // ticks (0,4s) na fase atual
+    var failed = false
+    let session: String
+    let born = Date()
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var window: NSWindow!
     var petView: PetView!
@@ -69,6 +82,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var updateTimer: Timer?
     let appVersion = "1.3.0"
 
+    // ninhada de subagentes
+    var babies: [Baby] = []
+    var babyTimer: Timer?
+
     var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Craby")
@@ -86,8 +103,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         loadConfig()
         loadCustomSprites(from: appSupportDir.appendingPathComponent("sprites.json"))
 
-        let width = CGFloat(gridCols) * pixelSize
-        let height = CGFloat(gridRows) * pixelSize
+        // janela inclui a faixa da ninhada abaixo do Craby
+        let width = petWindowWidth
+        let height = petWindowHeight
 
         window = NSWindow(
             contentRect: initialFrame(width: width, height: height),
@@ -138,6 +156,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     guard let self else { return nil }
                     if command == "quit" { NSApp.terminate(nil); return nil }
                     if command == "status" { return self.statusJSON() }
+                    if command == "subagent-start" {
+                        self.babyBorn(session: query["session"] ?? "default")
+                        return nil
+                    }
+                    if command == "subagent-stop" {
+                        self.babyStopped(
+                            session: query["session"] ?? "default",
+                            failed: query["failed"] == "1")
+                        return nil
+                    }
                     if command.hasPrefix("answer/") {
                         self.answerCurrentAsk(String(command.dropFirst("answer/".count)))
                         return nil
@@ -178,6 +206,87 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateTimer = Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) {
             [weak self] _ in self?.checkForUpdates()
         }
+
+        babyTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) {
+            [weak self] _ in self?.babyTick()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Ninhada: ovo racha -> filhote tamborila -> bengala -> puf
+    // ------------------------------------------------------------------
+
+    func babyBorn(session: String) {
+        lastEventAt = Date() // ninhada nova também acorda o Craby
+        babies.append(Baby(session: session))
+        renderBabies()
+    }
+
+    func babyStopped(session: String, failed: Bool) {
+        guard let i = babies.firstIndex(where: {
+            $0.session == session && ($0.phase == .alive || $0.phase == .hatching)
+        }) else { return }
+        babies[i].phase = .elderly
+        babies[i].tick = 0
+        babies[i].failed = failed
+        renderBabies()
+    }
+
+    func babyTick() {
+        guard !babies.isEmpty else { return }
+        for i in babies.indices {
+            babies[i].tick += 1
+            switch babies[i].phase {
+            case .hatching:
+                if babies[i].tick >= 4 {
+                    babies[i].phase = .alive
+                    babies[i].tick = 0
+                    if soundsEnabled { NSSound(named: "Pop")?.play() }
+                }
+            case .alive:
+                // órfão (o stop nunca veio): aposenta como falha após 30min
+                if Date().timeIntervalSince(babies[i].born) > 1800 {
+                    babies[i].phase = .elderly
+                    babies[i].tick = 0
+                    babies[i].failed = true
+                }
+            case .elderly:
+                if babies[i].tick >= 6 { // ~2,4s de bengala
+                    babies[i].phase = .poof
+                    babies[i].tick = 0
+                }
+            case .poof:
+                break
+            }
+        }
+        babies.removeAll { $0.phase == .poof && $0.tick >= 2 }
+        renderBabies()
+    }
+
+    private func babyGrid(_ baby: Baby) -> [String] {
+        switch baby.phase {
+        case .hatching:
+            return baby.tick < 2 ? babyEgg : babyEggCracking
+        case .alive:
+            return baby.tick % 2 == 0 ? babyAlive1 : babyAlive2
+        case .elderly:
+            return babyElderly
+        case .poof:
+            let grid = baby.tick < 1 ? babyPoof1 : babyPoof2
+            return baby.failed ? failedRecolor(grid) : grid
+        }
+    }
+
+    private func renderBabies() {
+        petView.babyGrids = babies.map(babyGrid)
+        petView.needsDisplay = true
+    }
+
+    func liveBabyCount(session: String? = nil) -> Int {
+        babies.filter {
+            ($0.phase == .alive || $0.phase == .hatching)
+                && (session == nil || $0.session == session)
+        }.count
     }
 
     // ------------------------------------------------------------------
@@ -234,6 +343,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             "displayed": state.rawValue,
             "level": stats.level.number,
             "totalTasks": stats.data.totalTasks,
+            "subagents": liveBabyCount(),
             "sessions": sessionList,
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
@@ -546,14 +656,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         let now = Date()
-        petView.toolTip = active.values
-            .map { info -> String in
+        petView.toolTip = active
+            .map { key, info -> String in
                 let name = info.project ?? L.sessionFallback
+                var line: String
                 if info.state == .working, let since = info.workingSince {
                     let minutes = max(0, Int(now.timeIntervalSince(since) / 60))
-                    return "\(name): \(L.workingFor(minutes))"
+                    line = "\(name): \(L.workingFor(minutes))"
+                } else {
+                    line = "\(name): \(L.stateLabel(info.state))"
                 }
-                return "\(name): \(L.stateLabel(info.state))"
+                let kids = liveBabyCount(session: key)
+                if kids > 0 { line += " · \(kids) 🐣" }
+                return line
             }
             .sorted()
             .joined(separator: "\n")
@@ -948,6 +1063,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 final class PetView: NSView {
     var grid: [String] = []
+    var babyGrids: [[String]] = []
     var onAcknowledge: (() -> Void)?
     var onMoved: (() -> Void)?
 
@@ -956,7 +1072,14 @@ final class PetView: NSView {
     private var didDrag = false
 
     override func draw(_ dirtyRect: NSRect) {
-        drawGrid(grid, pixel: pixelSize, height: bounds.height)
+        // Craby centralizado no alto; ninhada na faixa de baixo
+        drawGridAt(grid, pixel: pixelSize, viewHeight: bounds.height,
+                   originX: crabOffsetX, topY: 0)
+        for (i, baby) in babyGrids.prefix(maxVisibleBabies).enumerated() {
+            let x = 3 + CGFloat(i) * (CGFloat(babyCols) * babyPixel + 3)
+            drawGridAt(baby, pixel: babyPixel, viewHeight: bounds.height,
+                       originX: x, topY: petAreaHeight + 3)
+        }
     }
 
     // Clique esquerdo: foca quem precisa e reconhece avisos.
