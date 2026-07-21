@@ -24,9 +24,9 @@ iconutil -c icns "$TMP/icon.iconset" -o "$TMP/crab.icns"
 
 echo "==> Montando $APP"
 cp pet "$APP/Contents/MacOS/pet"
-cp ask.sh notify.sh setup.sh "$APP/Contents/Resources/"
+cp ask.sh notify.sh setup.sh bin/craby "$APP/Contents/Resources/"
 chmod +x "$APP/Contents/Resources/ask.sh" "$APP/Contents/Resources/notify.sh" \
-  "$APP/Contents/Resources/setup.sh"
+  "$APP/Contents/Resources/setup.sh" "$APP/Contents/Resources/craby"
 cp "$TMP/crab.icns" "$APP/Contents/Resources/crab.icns"
 cat > "$APP/Contents/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -38,7 +38,7 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
     <key>CFBundleExecutable</key><string>pet</string>
     <key>CFBundleIconFile</key><string>crab</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.4.0</string>
+    <key>CFBundleShortVersionString</key><string>1.5.0</string>
     <key>LSUIElement</key><true/>
 </dict>
 </plist>

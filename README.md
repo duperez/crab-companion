@@ -25,13 +25,18 @@ And the best part: when Claude asks for permission or has a question, a **speech
 - **Ask the user anything** — a local HTTP API lets Claude (or any script) ask multiple-choice or free-text questions through the bubble, with graceful fallback to the terminal.
 - **Multi-session scoreboard** — running several Claude Code sessions? The crab shows the highest-priority state across all of them, with white dots for parallel working sessions and a tooltip listing each project's status. Clicking the crab raises the window of the project that needs you (requires Accessibility permission).
 - **A brood of subagents** — when Claude Code spawns subagents, each one hatches as a baby crab in a strip below Craby: an egg cracks open with a *pop*, tiny legs drum away while the subagent runs, and when it finishes the little one retires with a cane for a couple of seconds and poofs into sparkles (*tink*). Failed or orphaned subagents poof in gray/red with a low *basso* thud — you can tell success from failure by ear alone. Up to 5 babies visible, session counts in Craby's tooltip ("· N 🐣"), reported by `GET /status`, powered by the official `SubagentStart`/`SubagentStop` hooks. As far as we know, no other coding-status pet turns your subagents into offspring.
-- **Sounds** — subtle *pling* on done, *ping* on attention. Toggle in the menu bar menu.
+- **Sounds with themes** — subtle cues for done/attention/hatch/poof/level-up, in three themes (Classic, Soft, Retro) plus per-event overrides. Toggle and pick the theme in Preferences.
+- **Craby speaks** — little toasts above his head: a good-morning greeting (with your streak), task milestones, brood records, and a one-line summary of what each session just finished (extracted locally from the transcript — nothing leaves your machine).
+- **Preferences window** — ntfy topic, sounds, sound theme, hide-on-screen-share and more, no config-file editing required (menu → Preferences).
+- **`craby` CLI** — `craby status`, `craby ask "question" A B`, `craby input "question"`, `craby done`… the whole HTTP API with a friendly wrapper, installed to your PATH.
+- **One-click updates** — when a new version is out, the menu offers "Update now": Craby downloads the release, swaps himself and restarts.
+- **Presentation mode** — hides automatically while your screen is being shared (best effort; toggle in Preferences).
 - **He's alive** — his eyes follow your mouse around the screen, he has spontaneous idle quirks (a little wave, a side-step, blowing a bubble), a sweat drop when a task runs long, a nap when nothing happens, and a confetti celebration when he levels up. From level 3 he wears his rank on his head: hard hat → master's hat → crown. On first launch he introduces himself.
 - **Daily stats and levels** — the menu bar shows what happened today (tasks finished, projects, time worked), your day streak, and the last events — click one to jump to that project's window. Craby's level grows from *hatchling* to *legend* as tasks pile up, and the menu tells you when a new version is out.
 - **Phone alerts when you're away** — optional: if nobody touches the Mac for 2 minutes and Claude needs you, Craby pings your phone via [ntfy](https://ntfy.sh) (see Configuration).
 - **Drag him anywhere** — grab and drop Craby wherever you like; the position is remembered. Bubble shortcuts too: click a bubble, then press 1/2/3 to choose or Esc for the terminal.
 - **Custom sprite packs** — the sprites are character grids; drop a `sprites.json` next to his config to reskin Craby entirely (cat? octopus? PRs welcome).
-- **English and Portuguese** — UI follows your system language.
+- **English, Portuguese and Spanish** — UI follows your system language.
 - **Safe by design** — if you don't answer a bubble in time, everything falls back to the normal terminal prompt. Craby never decides anything by himself, and the endpoints that *inject decisions* require a local secret token.
 
 ## Install

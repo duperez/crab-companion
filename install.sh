@@ -25,3 +25,12 @@ rm -rf "$HOME/Applications/Craby.app"
 cp -R dist/Craby.app "$HOME/Applications/Craby.app"
 
 "$HOME/Applications/Craby.app/Contents/Resources/setup.sh"
+
+# CLI opcional: craby no PATH
+if [ -w /usr/local/bin ] || [ -w /opt/homebrew/bin ]; then
+  BIN_DIR=$([ -w /opt/homebrew/bin ] && echo /opt/homebrew/bin || echo /usr/local/bin)
+  ln -sf "$HOME/Applications/Craby.app/Contents/Resources/craby" "$BIN_DIR/craby"
+  echo "==> CLI instalado: craby ($BIN_DIR/craby)"
+else
+  echo "==> CLI: copie bin/craby para o seu PATH se quiser usar o comando 'craby'"
+fi

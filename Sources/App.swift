@@ -28,10 +28,14 @@ struct SessionInfo {
     var at: Date
     var project: String?
     var workingSince: Date?
+    var summary: String? // resuminho da última resposta (hook Stop)
 }
 
 struct CrabyConfig: Codable {
     var ntfyTopic: String?
+    var soundTheme: String? // classic | soft | retro
+    var soundPack: [String: String]? // override por evento (ver Sounds.swift)
+    var hideOnScreenShare: Bool? // padrão: true
 }
 
 // filhote = um subagente em execução (hooks SubagentStart/SubagentStop)
@@ -80,11 +84,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var lastEventAt = Date()
     var availableUpdate: String?
     var updateTimer: Timer?
-    let appVersion = "1.4.0"
+    let appVersion = "1.5.0"
 
     // ninhada de subagentes
     var babies: [Baby] = []
     var babyTimer: Timer?
+
+    // frases do Craby (toasts), preferências e modo apresentação
+    var toastWindow: NSWindow?
+    var toastDismiss: DispatchWorkItem?
+    var prefsWindow: NSWindow?
+    var hiddenForSharing = false
 
     var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -146,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             [weak self] _ in
             self?.recomputeDisplayed()
             self?.maybeQuirk()
+            self?.updatePresentationMode()
         }
 
         do {
@@ -174,7 +185,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                         self.sessionEvent(
                             newState,
                             session: query["session"] ?? "default",
-                            project: query["project"])
+                            project: query["project"],
+                            summary: query["summary"])
                     }
                     return nil
                 },
@@ -219,6 +231,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func babyBorn(session: String) {
         lastEventAt = Date() // ninhada nova também acorda o Craby
         babies.append(Baby(session: session))
+        if stats.recordBrood(count: liveBabyCount()) {
+            showToast(L.broodRecord(liveBabyCount()))
+        }
         renderBabies()
     }
 
@@ -241,7 +256,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 if babies[i].tick >= 4 {
                     babies[i].phase = .alive
                     babies[i].tick = 0
-                    if soundsEnabled { NSSound(named: "Pop")?.play() }
+                    play(.hatch)
                 }
             case .alive:
                 // órfão (o stop nunca veio): aposenta como falha após 30min
@@ -254,10 +269,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 if babies[i].tick >= 6 { // ~2,4s de bengala
                     babies[i].phase = .poof
                     babies[i].tick = 0
-                    if soundsEnabled {
-                        // cristalzinho no puf normal; baque grave no puf de erro
-                        NSSound(named: babies[i].failed ? "Basso" : "Tink")?.play()
-                    }
+                    play(babies[i].failed ? .poofFail : .poofOk)
                 }
             case .poof:
                 break
@@ -329,6 +341,194 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             URL(string: "https://github.com/duperez/crab-companion/releases")!)
     }
 
+    // ------------------------------------------------------------------
+    // Auto-update: baixa o zip do release, troca o bundle e reinicia
+    // ------------------------------------------------------------------
+
+    @objc func updateNow() {
+        guard let version = availableUpdate,
+              let url = URL(string:
+                "https://github.com/duperez/crab-companion/releases/download/v\(version)/Craby.app.zip")
+        else { return }
+        showToast(L.updating, seconds: 30)
+        URLSession.shared.downloadTask(with: url) { [weak self] tmp, _, error in
+            DispatchQueue.main.async { self?.installUpdate(from: tmp, error: error) }
+        }.resume()
+    }
+
+    private func runTool(_ path: String, _ args: [String]) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = args
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch { return false }
+    }
+
+    private func installUpdate(from tmp: URL?, error: Error?) {
+        guard let tmp, error == nil else {
+            showToast(L.updateFailed)
+            openReleases()
+            return
+        }
+        let bundleURL = Bundle.main.bundleURL // .../Craby.app
+        let staging = FileManager.default.temporaryDirectory
+            .appendingPathComponent("craby-update-\(UUID().uuidString)")
+        do {
+            try FileManager.default.createDirectory(
+                at: staging, withIntermediateDirectories: true)
+            guard runTool("/usr/bin/ditto", ["-x", "-k", tmp.path, staging.path]) else {
+                throw CocoaError(.fileReadUnknown)
+            }
+            let newApp = staging.appendingPathComponent("Craby.app")
+            let newBinary = newApp.appendingPathComponent("Contents/MacOS/pet")
+            guard FileManager.default.isExecutableFile(atPath: newBinary.path) else {
+                throw CocoaError(.fileNoSuchFile)
+            }
+            _ = runTool("/usr/bin/xattr", ["-dr", "com.apple.quarantine", newApp.path])
+            try? FileManager.default.removeItem(at: bundleURL)
+            try FileManager.default.moveItem(at: newApp, to: bundleURL)
+            // o LaunchAgent nos derruba e sobe a versão nova
+            _ = runTool("/bin/launchctl",
+                        ["kickstart", "-k", "gui/\(getuid())/com.crab-companion.pet"])
+            // se não estivermos sob o launchd, encerra mesmo assim (usuário reabre)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { NSApp.terminate(nil) }
+        } catch {
+            showToast(L.updateFailed)
+            openReleases()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Modo apresentação: some quando a tela está sendo compartilhada
+    // (melhor esforço — cobre compartilhamento de tela do sistema)
+    // ------------------------------------------------------------------
+
+    func isScreenShared() -> Bool {
+        guard config.hideOnScreenShare ?? true else { return false }
+        guard let dict = CGSessionCopyCurrentDictionary() as? [String: Any] else {
+            return false
+        }
+        return (dict["CGSSessionScreenIsShared"] as? Bool) ?? false
+    }
+
+    func updatePresentationMode() {
+        let shared = isScreenShared()
+        if shared && !hiddenForSharing {
+            hiddenForSharing = true
+            window.orderOut(nil)
+            toastWindow?.orderOut(nil)
+        } else if !shared && hiddenForSharing {
+            hiddenForSharing = false
+            if floatingVisible { window.orderFrontRegardless() }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Preferências
+    // ------------------------------------------------------------------
+
+    var ntfyField: NSTextField?
+
+    @objc func openPreferences() {
+        if prefsWindow == nil { buildPreferencesWindow() }
+        ntfyField?.stringValue = config.ntfyTopic ?? ""
+        prefsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate()
+    }
+
+    private func buildPreferencesWindow() {
+        let w: CGFloat = 400
+        let h: CGFloat = 240
+        let win = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: w, height: h),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        win.title = L.prefsTitle
+        win.isReleasedWhenClosed = false
+        win.center()
+        let content = NSView(frame: NSRect(x: 0, y: 0, width: w, height: h))
+
+        let ntfyLabel = NSTextField(labelWithString: L.prefsNtfy)
+        ntfyLabel.frame = NSRect(x: 20, y: h - 40, width: w - 40, height: 18)
+        content.addSubview(ntfyLabel)
+
+        let field = NSTextField(frame: NSRect(x: 20, y: h - 68, width: w - 40, height: 24))
+        field.placeholderString = "meu-topico-secreto"
+        field.target = self
+        field.action = #selector(ntfyChanged(_:))
+        content.addSubview(field)
+        ntfyField = field
+
+        let soundsCheck = NSButton(
+            checkboxWithTitle: L.sounds, target: self, action: #selector(prefsSoundsToggled(_:)))
+        soundsCheck.state = soundsEnabled ? .on : .off
+        soundsCheck.frame = NSRect(x: 20, y: h - 100, width: 160, height: 20)
+        content.addSubview(soundsCheck)
+
+        let themeLabel = NSTextField(labelWithString: L.prefsSoundTheme)
+        themeLabel.frame = NSRect(x: 200, y: h - 100, width: 100, height: 18)
+        content.addSubview(themeLabel)
+
+        let themePopup = NSPopUpButton(
+            frame: NSRect(x: 295, y: h - 104, width: 90, height: 26))
+        for key in soundThemeOrder { themePopup.addItem(withTitle: L.themeName(key)) }
+        themePopup.selectItem(
+            at: soundThemeOrder.firstIndex(of: config.soundTheme ?? "classic") ?? 0)
+        themePopup.target = self
+        themePopup.action = #selector(themeChanged(_:))
+        content.addSubview(themePopup)
+
+        let shareCheck = NSButton(
+            checkboxWithTitle: L.prefsHideOnShare, target: self,
+            action: #selector(hideOnShareToggled(_:)))
+        shareCheck.state = (config.hideOnScreenShare ?? true) ? .on : .off
+        shareCheck.frame = NSRect(x: 20, y: h - 132, width: w - 40, height: 20)
+        content.addSubview(shareCheck)
+
+        let openFolder = NSButton(
+            title: L.prefsOpenFolder, target: self, action: #selector(openConfigFolder))
+        openFolder.bezelStyle = .rounded
+        openFolder.frame = NSRect(x: 20, y: 20, width: 200, height: 30)
+        content.addSubview(openFolder)
+
+        let reset = NSButton(
+            title: L.resetPosition, target: self, action: #selector(resetPosition))
+        reset.bezelStyle = .rounded
+        reset.frame = NSRect(x: 230, y: 20, width: 150, height: 30)
+        content.addSubview(reset)
+
+        win.contentView = content
+        prefsWindow = win
+    }
+
+    @objc func ntfyChanged(_ sender: NSTextField) {
+        let value = sender.stringValue.trimmingCharacters(in: .whitespaces)
+        config.ntfyTopic = value.isEmpty ? nil : value
+        saveConfig()
+    }
+
+    @objc func prefsSoundsToggled(_ sender: NSButton) {
+        UserDefaults.standard.set(sender.state == .on, forKey: "soundsEnabled")
+    }
+
+    @objc func themeChanged(_ sender: NSPopUpButton) {
+        let idx = sender.indexOfSelectedItem
+        config.soundTheme = soundThemeOrder[min(max(idx, 0), soundThemeOrder.count - 1)]
+        saveConfig()
+        play(.done) // preview do tema
+    }
+
+    @objc func hideOnShareToggled(_ sender: NSButton) {
+        config.hideOnScreenShare = sender.state == .on
+        saveConfig()
+    }
+
+    @objc func openConfigFolder() {
+        NSWorkspace.shared.open(appSupportDir)
+    }
+
     @objc func openHomepage() {
         NSWorkspace.shared.open(URL(string: "https://duperez.github.io/crab-companion/")!)
     }
@@ -378,6 +578,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let raw = try? Data(contentsOf: url),
            let loaded = try? JSONDecoder().decode(CrabyConfig.self, from: raw) {
             config = loaded
+        }
+    }
+
+    func saveConfig() {
+        let url = appSupportDir.appendingPathComponent("config.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if let raw = try? encoder.encode(config) {
+            try? raw.write(to: url, options: .atomic)
         }
     }
 
@@ -455,6 +664,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(streakItem)
         }
 
+        if let maxBrood = day.maxBrood, maxBrood > 1 {
+            let broodItem = NSMenuItem(
+                title: L.broodLine(maxBrood), action: nil, keyEquivalent: "")
+            broodItem.isEnabled = false
+            menu.addItem(broodItem)
+        }
+
         let eventsItem = NSMenuItem(title: L.recentEvents, action: nil, keyEquivalent: "")
         let eventsMenu = NSMenu()
         let events = stats.recentEvents()
@@ -509,11 +725,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         if let update = availableUpdate {
             let item = NSMenuItem(
-                title: "🆕 " + L.updateAvailable(update),
-                action: #selector(openReleases), keyEquivalent: "")
+                title: "🆕 " + L.updateNow(update),
+                action: #selector(updateNow), keyEquivalent: "")
             item.target = self
             menu.addItem(item)
         }
+
+        let prefs = NSMenuItem(
+            title: L.preferences, action: #selector(openPreferences), keyEquivalent: ",")
+        prefs.target = self
+        menu.addItem(prefs)
 
         let about = NSMenuItem(
             title: L.about, action: #selector(openHomepage), keyEquivalent: "")
@@ -546,11 +767,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         UserDefaults.standard.set(!soundsEnabled, forKey: "soundsEnabled")
     }
 
-    func playSound(for newState: PetState) {
+    func play(_ event: SoundEvent) {
         guard soundsEnabled else { return }
+        NSSound(named: soundName(
+            event: event, theme: config.soundTheme, overrides: config.soundPack))?.play()
+    }
+
+    func playSound(for newState: PetState) {
         switch newState {
-        case .done: NSSound(named: "Glass")?.play()
-        case .attention: NSSound(named: "Ping")?.play()
+        case .done: play(.done)
+        case .attention: play(.attention)
         default: break
         }
     }
@@ -585,8 +811,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // Multi-sessão: cada sessão tem um estado; o pet exibe o de maior prioridade
     // ------------------------------------------------------------------
 
-    func sessionEvent(_ newState: PetState, session: String, project: String? = nil) {
+    func sessionEvent(
+        _ newState: PetState, session: String, project: String? = nil,
+        summary: String? = nil
+    ) {
         let now = Date()
+        maybeGreet() // primeiro evento do dia rende um "bom dia"
         lastEventAt = now // qualquer evento acorda o Craby
         let existing = sessions[session]
         let proj = project ?? existing?.project
@@ -603,7 +833,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if newState == .done {
             let levelBefore = stats.level.number
             stats.recordDone(project: proj ?? "?")
-            if stats.level.number > levelBefore { celebrateLevelUp() }
+            if stats.level.number > levelBefore {
+                celebrateLevelUp()
+            } else if [5, 10, 20, 50].contains(stats.today.tasks) {
+                showToast(L.tasksMilestone(stats.today.tasks))
+            } else if let summary, !summary.isEmpty, session != "ask" {
+                showToast("✅ \(proj ?? "?"): \(String(summary.prefix(80)))")
+            }
         }
         if newState == .attention {
             stats.recordAttention(project: proj ?? "?")
@@ -611,8 +847,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         sessions[session] = SessionInfo(
-            state: newState, at: now, project: proj, workingSince: workingSince)
+            state: newState, at: now, project: proj, workingSince: workingSince,
+            summary: summary ?? existing?.summary)
         recomputeDisplayed()
+    }
+
+    // "bom dia" uma vez por dia, no primeiro sinal de vida
+    private func maybeGreet() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = formatter.string(from: Date())
+        guard UserDefaults.standard.string(forKey: "lastGreetDay") != today else { return }
+        UserDefaults.standard.set(today, forKey: "lastGreetDay")
+        let streak = stats.streakDays
+        showToast(streak >= 3 ? "\(L.goodMorning) \(L.streak(streak))" : L.goodMorning)
     }
 
     // clique no pet: se alguém precisa de você, foca a janela daquela sessão;
@@ -667,6 +915,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 if info.state == .working, let since = info.workingSince {
                     let minutes = max(0, Int(now.timeIntervalSince(since) / 60))
                     line = "\(name): \(L.workingFor(minutes))"
+                } else if info.state == .done, let summary = info.summary, !summary.isEmpty {
+                    line = "\(name): ✅ \(String(summary.prefix(70)))"
                 } else {
                     line = "\(name): \(L.stateLabel(info.state))"
                 }
@@ -730,8 +980,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func celebrateLevelUp() {
         stats.recordLevelUp()
-        if soundsEnabled { NSSound(named: "Funk")?.play() }
+        play(.levelUp)
         startQuirk(levelUpFrames + levelUpFrames)
+    }
+
+    // ------------------------------------------------------------------
+    // Frases do Craby: mini-balão informativo que some sozinho
+    // ------------------------------------------------------------------
+
+    func showToast(_ text: String, seconds: Double = 5) {
+        guard bubbleWindow == nil else { return } // balões de verdade têm prioridade
+        toastDismiss?.cancel()
+        toastWindow?.orderOut(nil)
+
+        let width = min(300, max(120, CGFloat(text.count) * 6.5 + 28))
+        let height: CGFloat = 30
+        let petFrame = window.frame
+        let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        var x = petFrame.midX - width / 2
+        x = max(screen.visibleFrame.minX + 8,
+                min(x, screen.visibleFrame.maxX - width - 8))
+        var y = petFrame.maxY + 6
+        if y + height > screen.visibleFrame.maxY { y = petFrame.minY - height - 6 }
+
+        let toast = BubblePanel(
+            contentRect: NSRect(x: x, y: y, width: width, height: height),
+            styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        toast.isOpaque = false
+        toast.backgroundColor = .clear
+        toast.hasShadow = true
+        toast.level = .floating
+        toast.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        toast.ignoresMouseEvents = true
+
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor(calibratedWhite: 0.13, alpha: 0.96).cgColor
+        container.layer?.cornerRadius = 8
+        container.layer?.borderWidth = 1
+        container.layer?.borderColor = NSColor.systemYellow.withAlphaComponent(0.6).cgColor
+
+        let label = NSTextField(labelWithString: text)
+        label.font = .systemFont(ofSize: 11)
+        label.textColor = .white
+        label.alignment = .center
+        label.lineBreakMode = .byTruncatingTail
+        label.frame = NSRect(x: 10, y: 7, width: width - 20, height: 16)
+        container.addSubview(label)
+
+        toast.contentView = container
+        toast.orderFrontRegardless()
+        toastWindow = toast
+
+        let dismiss = DispatchWorkItem { [weak self] in
+            self?.toastWindow?.orderOut(nil)
+            self?.toastWindow = nil
+        }
+        toastDismiss = dismiss
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: dismiss)
     }
 
     // ------------------------------------------------------------------

@@ -16,6 +16,7 @@ struct DayStats: Codable {
     var tasks = 0
     var projects: [String] = []
     var workSeconds: Double = 0
+    var maxBrood: Int? // opcional p/ compatibilidade com stats antigos
 }
 
 struct StatsData: Codable {
@@ -90,6 +91,17 @@ final class StatsStore {
         appendEvent(project: "Craby", kind: "level")
     }
 
+    // registra o tamanho atual da ninhada; retorna true se é um novo recorde (>1)
+    func recordBrood(count: Int) -> Bool {
+        var day = today
+        let previous = day.maxBrood ?? 0
+        guard count > previous else { return false }
+        day.maxBrood = count
+        data.days[dayKey()] = day
+        save()
+        return count > 1
+    }
+
     func addWork(project: String, seconds: Double) {
         guard seconds > 0, seconds < 12 * 3600 else { return } // descarta absurdos
         var day = today
@@ -109,7 +121,7 @@ final class StatsStore {
         save()
     }
 
-    private func save() {
+    func save() {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         guard let raw = try? encoder.encode(data) else { return }

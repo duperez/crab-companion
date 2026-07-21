@@ -25,13 +25,18 @@ E o melhor: quando o Claude pede permissão ou tem uma pergunta, um **balão de 
 - **Perguntas pelo balão** — uma API HTTP local permite que o Claude (ou qualquer script) faça perguntas de múltipla escolha ou texto livre pelo balão, com fallback pro terminal.
 - **Placar multi-sessão** — várias sessões do Claude Code ao mesmo tempo? O caranguejo mostra o estado de maior prioridade entre todas, com pontinhos brancos para sessões trabalhando em paralelo e um tooltip listando o status de cada projeto. Clicar nele ergue a janela do projeto que precisa de você (requer permissão de Acessibilidade).
 - **Uma ninhada de subagentes** — quando o Claude Code dispara subagentes, cada um nasce como um mini-caranguejo numa faixa abaixo do Craby: um ovo racha com um *pop*, as patinhas tamborilam enquanto o subagente roda, e quando ele termina o filhote se aposenta de bengala por uns segundos e some num puf de estrelinhas (*tink*). Subagente que falha ou fica órfão dá um puf cinza/vermelho com um som grave (*basso*) — dá pra distinguir sucesso de falha só de ouvido. Até 5 filhotes visíveis, contagem por sessão no tooltip do Craby ("· N 🐣"), reportado no `GET /status`, alimentado pelos hooks oficiais `SubagentStart`/`SubagentStop`. Até onde sabemos, nenhum outro pet de status de código transforma seus subagentes em filhotes.
-- **Sons** — *plim* discreto no terminou, *ping* na atenção. Liga/desliga no menu da barra.
+- **Sons com temas** — toques discretos pra terminou/atenção/nascimento/puf/level-up, em três temas (Clássico, Suave, Retrô) e com override por evento. Liga/desliga e escolhe o tema nas Preferências.
+- **Craby fala** — mini-toasts acima da cabeça dele: bom-dia (com sua sequência de dias), marcos de tarefas, recordes de ninhada e um resumo de uma linha do que cada sessão acabou de terminar (extraído localmente do transcript — nada sai da sua máquina).
+- **Janela de Preferências** — tópico ntfy, sons, tema de sons, recolher ao compartilhar tela e mais, sem editar arquivo de configuração (menu → Preferências).
+- **CLI `craby`** — `craby status`, `craby ask "pergunta" A B`, `craby input "pergunta"`, `craby done`… toda a API HTTP num comando amigável, instalado no seu PATH.
+- **Atualização em um clique** — quando sai versão nova, o menu oferece "Atualizar agora": o Craby baixa o release, se troca e reinicia.
+- **Modo apresentação** — some sozinho enquanto sua tela está sendo compartilhada (melhor esforço; configurável nas Preferências).
 - **Ele é vivo** — os olhos dele seguem seu mouse pela tela, ele tem manias espontâneas no ócio (um aceninho, um passinho de lado, uma bolhinha), gota de esforço quando a tarefa demora, soneca quando nada acontece e comemoração com confete quando sobe de nível. Do nível 3 em diante, exibe a patente na cabeça: capacete de obra → chapéu de mestre → coroa. No primeiro uso, ele se apresenta.
 - **Estatísticas e níveis** — o menu da barra mostra o dia (tarefas concluídas, projetos, tempo trabalhado), sua sequência de dias e os últimos eventos — clique num deles pra pular pra janela daquele projeto. O nível do Craby cresce de *filhote* a *lenda* conforme as tarefas acumulam, e o menu avisa quando sai versão nova.
 - **Aviso no celular quando você está longe** — opcional: se ninguém mexe no Mac há 2 minutos e o Claude precisa de você, o Craby avisa seu celular via [ntfy](https://ntfy.sh) (veja Configuração).
 - **Arraste pra onde quiser** — pegue e solte o Craby em qualquer lugar; a posição fica salva. Atalhos no balão também: clique nele e aperte 1/2/3 pra escolher ou Esc pro terminal.
 - **Sprites customizados** — os sprites são grades de caracteres; um `sprites.json` na pasta de configuração troca o visual inteiro (gato? polvo? PRs bem-vindos).
-- **Português e inglês** — a interface segue o idioma do sistema.
+- **Português, inglês e espanhol** — a interface segue o idioma do sistema.
 - **Seguro por padrão** — se você não responder um balão a tempo, tudo cai no prompt normal do terminal. O Craby nunca decide nada sozinho, e os endpoints que *injetam decisões* exigem um token secreto local.
 
 ## Instalação

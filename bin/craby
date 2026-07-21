@@ -1,0 +1,76 @@
+#!/bin/bash
+# craby — cliente de linha de comando do Craby (Crab Companion)
+set -euo pipefail
+
+S="http://localhost:4923"
+TOKEN_FILE="$HOME/Library/Application Support/Craby/token"
+
+usage() {
+  cat <<'EOF'
+craby — fale com o seu caranguejo 🦀
+
+uso:
+  craby status                          estado atual (JSON)
+  craby working|done|attention|idle     marca estado (projeto = pasta atual)
+  craby ask "pergunta" "op A" "op B"    múltipla escolha no balão (imprime a escolhida)
+  craby input "pergunta"                texto livre no balão (imprime a resposta)
+  craby answer <allow|deny|ask|opt:N|txt:...>   responde o balão atual
+  craby quit                            encerra o app
+EOF
+}
+
+[ $# -ge 1 ] || { usage; exit 1; }
+cmd=$1
+shift || true
+proj=$(basename "$PWD" | jq -sRr @uri)
+
+case "$cmd" in
+  status)
+    curl -s -m 2 "$S/status" | jq .
+    ;;
+  working|done|attention|idle)
+    curl -s -m 2 "$S/$cmd?session=craby-cli&project=$proj" && echo
+    ;;
+  ask)
+    [ $# -ge 3 ] || { echo "erro: craby ask \"pergunta\" \"op A\" \"op B\" [...]" >&2; exit 1; }
+    q=$1
+    shift
+    opts_json=$(printf '%s\n' "$@" | jq -R . | jq -cs .)
+    resp=$(jq -nc --arg d "$q" --argjson o "$opts_json" \
+      '{title:"[cli] 🦀", detail:$d, urgent:false, options:$o, input:null}' \
+      | curl -s --max-time 90 -X POST -H 'Content-Type: application/json' -d @- "$S/ask")
+    case "$resp" in
+      opt:*)
+        i=$(( ${resp#opt:} + 1 ))
+        echo "${!i}"
+        ;;
+      *) echo "$resp" ;;
+    esac
+    ;;
+  input)
+    [ $# -ge 1 ] || { echo "erro: craby input \"pergunta\"" >&2; exit 1; }
+    resp=$(jq -nc --arg d "$1" \
+      '{title:"[cli] 🦀", detail:$d, urgent:false, options:null, input:true}' \
+      | curl -s --max-time 120 -X POST -H 'Content-Type: application/json' -d @- "$S/ask")
+    case "$resp" in
+      txt:*) echo "${resp#txt:}" ;;
+      *) echo "$resp" ;;
+    esac
+    ;;
+  answer)
+    [ $# -ge 1 ] || { echo "erro: craby answer <allow|deny|ask|opt:N|txt:...>" >&2; exit 1; }
+    tok=$(cat "$TOKEN_FILE" 2>/dev/null || true)
+    curl -s -m 2 "$S/answer/$1?token=$tok" && echo
+    ;;
+  quit)
+    tok=$(cat "$TOKEN_FILE" 2>/dev/null || true)
+    curl -s -m 2 "$S/quit?token=$tok" && echo
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac

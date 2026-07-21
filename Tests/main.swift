@@ -106,6 +106,25 @@ let decoded = try? JSONDecoder().decode(AskPayload.self, from: payload.data(usin
 check(decoded?.options?.count == 2, "AskPayload: decodifica options")
 check(decoded?.input == nil, "AskPayload: input nulo vira nil")
 
+// --- temas de som ---
+
+for (theme, map) in soundThemes {
+    for event in SoundEvent.allCases {
+        check(map[event] != nil, "tema \(theme): tem som para \(event.rawValue)")
+    }
+}
+check(soundName(event: .done, theme: "inexistente", overrides: nil) == "Glass",
+      "tema desconhecido cai no classic")
+check(soundName(event: .done, theme: "classic", overrides: ["done": "Hero"]) == "Hero",
+      "override individual vence o tema")
+
+// --- compatibilidade de stats antigos (sem maxBrood) ---
+
+let oldDay = "{\"tasks\":3,\"projects\":[\"x\"],\"workSeconds\":10}"
+let decodedDay = try? JSONDecoder().decode(DayStats.self, from: oldDay.data(using: .utf8)!)
+check(decodedDay?.tasks == 3, "DayStats antigo decodifica sem maxBrood")
+check(decodedDay?.maxBrood == nil, "maxBrood ausente vira nil")
+
 // --- resultado ---
 
 print(failures == 0 ? "\ntodos os testes passaram" : "\n\(failures) falha(s)")
