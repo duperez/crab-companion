@@ -67,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var lastEventAt = Date()
     var availableUpdate: String?
     var updateTimer: Timer?
-    let appVersion = "1.2.0"
+    let appVersion = "1.2.1"
 
     var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -486,12 +486,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     // clique no pet: se alguém precisa de você, foca a janela daquela sessão;
-    // senão, só reconhece os avisos
+    // e reconhece só os AVISOS (attention/done) — trabalho em andamento continua
     func petClicked() {
         if let needy = sessions.values.first(where: { $0.state == .attention }) {
             focusSession(project: needy.project)
         }
-        for key in sessions.keys {
+        for (key, info) in sessions where info.state == .attention || info.state == .done {
             sessions[key]?.state = .idle
         }
         recomputeDisplayed()
@@ -924,20 +924,38 @@ final class PetView: NSView {
     var onAcknowledge: (() -> Void)?
     var onMoved: (() -> Void)?
 
+    private var initialMouse: NSPoint = .zero
+    private var initialOrigin: NSPoint = .zero
+    private var didDrag = false
+
     override func draw(_ dirtyRect: NSRect) {
         drawGrid(grid, pixel: pixelSize, height: bounds.height)
     }
 
     // Clique esquerdo: foca quem precisa e reconhece avisos.
     // Arrastar: move o Craby (posição fica salva). Clique direito: sai.
+    // O arrasto é rastreado manualmente para nunca confundir clique com arrasto.
     override func mouseDown(with event: NSEvent) {
-        let before = window?.frame.origin ?? .zero
-        window?.performDrag(with: event) // bloqueia até soltar o mouse
-        let after = window?.frame.origin ?? .zero
-        if abs(before.x - after.x) < 3 && abs(before.y - after.y) < 3 {
-            onAcknowledge?()
-        } else {
+        initialMouse = NSEvent.mouseLocation
+        initialOrigin = window?.frame.origin ?? .zero
+        didDrag = false
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let win = window else { return }
+        let loc = NSEvent.mouseLocation
+        let dx = loc.x - initialMouse.x
+        let dy = loc.y - initialMouse.y
+        if !didDrag && abs(dx) < 3 && abs(dy) < 3 { return } // tolerância de clique
+        didDrag = true
+        win.setFrameOrigin(NSPoint(x: initialOrigin.x + dx, y: initialOrigin.y + dy))
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        if didDrag {
             onMoved?()
+        } else {
+            onAcknowledge?()
         }
     }
 
