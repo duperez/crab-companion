@@ -2,3 +2,4 @@ pet
 .DS_Store
 *.iconset/
 *.icns
+dist/
