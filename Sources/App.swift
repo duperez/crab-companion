@@ -436,7 +436,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if prefsWindow == nil { buildPreferencesWindow() }
         ntfyField?.stringValue = config.ntfyTopic ?? ""
         prefsWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     private func buildPreferencesWindow() {
