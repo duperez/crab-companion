@@ -55,17 +55,18 @@ let sparkleFx2 = [
     ".Y..........Y.",
 ]
 
-// arte v2 (F2): talos, boquinha, garras-mão laterais, perninhas curtas
+// arte v2 (F2, corpo esbelto como o do done): talos, boquinha,
+// garras-mão laterais, perninhas curtas
 let idleV2a = [
     "..WB......WB..",
     "..WB......WB..",
     "..RRRRRRRRRR..",
-    "RRRRRRRRRRRRRR",
     "R.RRRRrrRRRR.R",
-    ".RrRRRRRRRRrR.",
     "..rRRRRRRRRr..",
     "..R..R..R..R..",
     "..r..r..r..r..",
+    "..............",
+    "..............",
     "..............",
 ]
 
@@ -74,12 +75,12 @@ let idleV2b = [
     "..............",
     "..WB......WB..",
     "..RRRRRRRRRR..",
-    "RRRRRRRRRRRRRR",
     "R.RRRRrrRRRR.R",
-    ".RrRRRRRRRRrR.",
     "..rRRRRRRRRr..",
     "...R..R..R..R.",
     "...r..r..r..r.",
+    "..............",
+    "..............",
     "..............",
 ]
 
@@ -88,12 +89,12 @@ let waveV2 = [
     "..WB......WB..",
     "..WB......WBR.",
     "..RRRRRRRRRRR.",
-    "RRRRRRRRRRRRRR",
     "R.RRRRrrRRRRR.",
-    ".RrRRRRRRRRrR.",
     "..rRRRRRRRRr..",
     "..R..R..R..R..",
     "..r..r..r..r..",
+    "..............",
+    "..............",
     "..............",
 ]
 

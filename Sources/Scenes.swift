@@ -186,7 +186,7 @@ let sceneAtento = Scene(
         emptyFx + idleV2b,
     ],
     slots: [
-        "garra": SceneSlot(pos: [(11, 2), (11, 3)], maxW: 3, maxH: 3),
+        "garra": SceneSlot(pos: [(11, 3), (11, 4)], maxW: 3, maxH: 3),
         "chao": SceneSlot(pos: [(4, 11), (4, 11)], maxW: 6, maxH: 3),
         "cabeca": SceneSlot(pos: [(2, 5), (2, 5)], maxW: 10, maxH: 2),
     ])
