@@ -3,3 +3,4 @@ pet
 *.iconset/
 *.icns
 dist/
+run_tests
