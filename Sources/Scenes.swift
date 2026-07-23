@@ -217,7 +217,7 @@ let propConfete = Prop(
 let propLupa = Prop(
     name: "lupa", slot: "garra",
     frames: [[
-        "CC.",
+        "CW.",
         "CCG",
         "..G",
     ]])
@@ -227,7 +227,7 @@ let propCaixote = Prop(
     name: "caixote", slot: "chao",
     frames: [[
         "GGGG",
-        "GLLG",
+        "GCCG",
         "GGGG",
     ]])
 

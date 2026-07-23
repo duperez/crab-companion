@@ -1623,9 +1623,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         render()
     }
 
+    // vigília ativa: o idle vira a cena "atento" — lupa erguida (e caixote
+    // no chão se houver container/docker sendo vigiado)
+    private var watchingFrames: [[String]] {
+        var props: [Prop] = [propLupa]
+        if watches.values.contains(where: { $0.alive && $0.source == "docker" }) {
+            props.append(propCaixote)
+        }
+        return (0..<sceneAtento.frames.count).map {
+            compose(scene: sceneAtento, props: props, frame: $0)
+        }
+    }
+
     private func render() {
+        var frames = quirk.isEmpty ? state.frames : []
+        if quirk.isEmpty, state == .idle,
+           watches.values.contains(where: { $0.alive }) {
+            frames = watchingFrames
+        }
         var grid = quirk.isEmpty
-            ? state.frames[frameIndex]
+            ? frames[frameIndex % frames.count]
             : quirk[min(quirkIndex, quirk.count - 1)]
         // olhos seguem o mouse (menos no laptop, onde ele está concentrado)
         var lookingLeft = false
@@ -1637,8 +1654,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         petView.grid = grid
         petView.needsDisplay = true
         // quadros de mania não entram no cache (são transitórios e variados)
+        let watching = quirk.isEmpty && state == .idle
+            && watches.values.contains(where: { $0.alive })
         let key = quirk.isEmpty
-            ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)-\(lookingLeft ? 1 : 0)"
+            ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)-\(lookingLeft ? 1 : 0)-\(watching ? 1 : 0)"
             : nil
         statusItem.button?.image = barImage(for: grid, key: key)
     }
