@@ -942,14 +942,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             event: event, theme: config.soundTheme, overrides: config.soundPack))?.play()
     }
 
-    func playSound(for newState: PetState) {
-        switch newState {
-        case .done: play(.done)
-        case .attention: play(.attention)
-        default: break
-        }
-    }
-
     // ------------------------------------------------------------------
     // Modo ausente: se ninguém mexe no Mac há 2min e o Claude precisa de
     // você, avisa no celular via ntfy (se configurado em config.json)
@@ -1011,6 +1003,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             stats.recordAttention(project: proj ?? "?")
             maybeNotifyPhone(project: proj)
         }
+        // som pertence ao ACONTECIMENTO: toca quando uma sessão conclui ou
+        // pede atenção, mesmo que outra fonte esteja dominando a tela
+        if newState == .done, existing?.state != .done { play(.done) }
+        if newState == .attention, existing?.state != .attention { play(.attention) }
 
         sessions[session] = SessionInfo(
             state: newState, at: now, project: proj, workingSince: workingSince,
@@ -1096,7 +1092,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateTooltip()
         updateCaption()
         if displayed != state {
-            playSound(for: displayed)
             applyState(displayed)
         } else {
             render() // pontinhos de sessões podem ter mudado
