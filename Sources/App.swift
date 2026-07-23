@@ -790,28 +790,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(broodItem)
         }
 
-        // addons: liga/desliga + pasta
+        // addons: submenu com liga/desliga + pasta
         addonManager.scan()
-        if !addonManager.addons.isEmpty {
-            let header = NSMenuItem(title: "🧩 Addons:", action: nil, keyEquivalent: "")
-            header.isEnabled = false
-            menu.addItem(header)
-            for (i, addon) in addonManager.addons.enumerated() {
-                let item = NSMenuItem(
-                    title: "   \(addon.manifest.name)"
-                        + (addon.manifest.description.map { " — \($0)" } ?? ""),
-                    action: #selector(toggleAddon(_:)), keyEquivalent: "")
-                item.target = self
-                item.tag = i
-                item.state = addonManager.isEnabled(addon) ? .on : .off
-                menu.addItem(item)
-            }
+        let addonsItem = NSMenuItem(title: "🧩 Addons", action: nil, keyEquivalent: "")
+        let addonsMenu = NSMenu()
+        for (i, addon) in addonManager.addons.enumerated() {
+            let item = NSMenuItem(
+                title: addon.manifest.name
+                    + (addon.manifest.description.map { " — \($0)" } ?? ""),
+                action: #selector(toggleAddon(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = i
+            item.state = addonManager.isEnabled(addon) ? .on : .off
+            addonsMenu.addItem(item)
         }
+        if !addonManager.addons.isEmpty { addonsMenu.addItem(NSMenuItem.separator()) }
         let addonsFolder = NSMenuItem(
             title: L.openAddonsFolder, action: #selector(openAddonsFolder),
             keyEquivalent: "")
         addonsFolder.target = self
-        menu.addItem(addonsFolder)
+        addonsMenu.addItem(addonsFolder)
+        addonsItem.submenu = addonsMenu
+        menu.addItem(addonsItem)
         menu.addItem(NSMenuItem.separator())
 
         // itens sob vigília: clicáveis quando têm URL
