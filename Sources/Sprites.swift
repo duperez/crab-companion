@@ -60,12 +60,12 @@ let sparkleFx2 = [
 let idleV2a = [
     "..WB......WB..",
     "..WB......WB..",
+    "...RRRRRRRR...",
     "..RRRRRRRRRR..",
-    "R.RRRRrrRRRR.R",
-    "..rRRRRRRRRr..",
+    ".RRRRRrrRRRRR.",
+    ".RrRRRRRRRRrR.",
     "..R..R..R..R..",
     "..r..r..r..r..",
-    "..............",
     "..............",
     "..............",
 ]
@@ -74,12 +74,12 @@ let idleV2a = [
 let idleV2b = [
     "..............",
     "..WB......WB..",
+    "...RRRRRRRR...",
     "..RRRRRRRRRR..",
-    "R.RRRRrrRRRR.R",
-    "..rRRRRRRRRr..",
+    ".RRRRRrrRRRRR.",
+    ".RrRRRRRRRRrR.",
     "...R..R..R..R.",
     "...r..r..r..r.",
-    "..............",
     "..............",
     "..............",
 ]
@@ -88,12 +88,12 @@ let idleV2b = [
 let waveV2 = [
     "..WB......WB..",
     "..WB......WBR.",
-    "..RRRRRRRRRRR.",
-    "R.RRRRrrRRRRR.",
-    "..rRRRRRRRRr..",
+    "...RRRRRRRR.R.",
+    "..RRRRRRRRRR..",
+    ".RRRRRrrRRRRR.",
+    ".RrRRRRRRRRr..",
     "..R..R..R..R..",
     "..r..r..r..r..",
-    "..............",
     "..............",
     "..............",
 ]
@@ -135,8 +135,8 @@ let deitadoV2 = [
     "..............",
     "..WB......WB..",
     "..RRRRRRRRRR..",
-    "RRRRRRRRRRRRRR",
-    ".rRRRRrrRRRRr.",
+    ".RRRRRrrRRRRR.",
+    ".RrRRRRRRRRrR.",
     "..r..r..r..r..",
 ]
 
