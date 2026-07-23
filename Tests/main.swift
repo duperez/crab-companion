@@ -26,8 +26,8 @@ for state in PetState.allCases {
     check(state.interval > 0, "\(state.rawValue): intervalo positivo")
 }
 
-check(isValidFrame(blinking(emptyFx + clawsDown)), "piscada preserva a grade")
-check(isValidFrame(jumping(sparkleFx2, clawsUp)), "pulo preserva a grade")
+check(isValidFrame(blinking(emptyFx + idleV2a)), "piscada preserva a grade")
+check(isValidFrame(jumping(sparkleFx2, idleV2a)), "pulo preserva a grade")
 
 // --- olhos e acessórios ---
 
@@ -69,7 +69,7 @@ check(stamp(["YY", "YY"], onto: emptyFx, x: 13, y: 3).count == emptyFx.count,
 
 // âncora por quadro: prop translada junto com o corpo
 let cenaTeste = Scene(
-    name: "t", frames: [emptyFx + clawsUp, emptyFx + clawsUp],
+    name: "t", frames: [emptyFx + idleV2a, emptyFx + idleV2a],
     slots: ["s": SceneSlot(pos: [(0, 0), (2, 0)], maxW: 3, maxH: 1)])
 let pontinho = Prop(name: "p", slot: "s", frames: [["Y"]])
 check(compose(scene: cenaTeste, props: [pontinho], frame: 0)[0].hasPrefix("Y"),

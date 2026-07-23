@@ -52,7 +52,7 @@ guard args.count >= 3 else {
 switch args[1] {
 case "icon":
     // ícone: só o caranguejo (sem a área de efeitos), centralizado em 1024px
-    writePNG(render(clawsUp, pixel: 64, canvas: 1024), to: args[2])
+    writePNG(render(emptyFx + idleV2a, pixel: 64, canvas: 1024), to: args[2])
     print("icone gerado")
 
 case "frames":
@@ -86,15 +86,18 @@ case "promo":
     func crabGridFor(_ t: Int) -> [String] {
         switch t {
         case 0..<16: // ocioso
-            return emptyFx + [clawsUp, clawsDown, clawsUp, blinking(clawsDown)][(t / 4) % 4]
+            return emptyFx
+                + [idleV2a, idleV2b, idleV2a, blinking(idleV2a)][(t / 4) % 4]
         case 16..<48: // trabalhando no laptop (cena debruçado + prop laptop)
             return compose(
                 scene: sceneDebrucado, props: [propLaptop], frame: (t % 4 < 2) ? 0 : 1)
         case 48..<64: // comemorando
-            return (t % 8 < 4) ? sparkleFx1 + clawsUp : jumping(sparkleFx2, clawsUp)
+            return compose(
+                scene: sceneComemorando, props: [propBrilhos],
+                frame: (t % 8 < 4) ? 0 : 1)
         default: // atenção
-            return [exclaimFx + clawsUp, emptyFx + rightUpLeftDown,
-                    exclaimFx + clawsUp, emptyFx + leftUpRightDown][(t / 3) % 4]
+            return [exclaimFx + waveV2, emptyFx + idleV2a,
+                    exclaimFx + waveV2, emptyFx + idleV2a][(t / 3) % 4]
         }
     }
 

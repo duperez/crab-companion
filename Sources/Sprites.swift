@@ -167,58 +167,6 @@ let cloudSparse = [
     "..............",
 ]
 
-let clawsUp = [
-    ".RR........RR.",
-    ".RR........RR.",
-    "..R........R..",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    ".R.R..RR..R.R.",
-    "R..R..RR..R..R",
-]
-
-let clawsDown = [
-    "..............",
-    "RRR........RRR",
-    ".R..........R.",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    "R..R..RR..R..R",
-    ".R.R..RR..R.R.",
-]
-
-let leftUpRightDown = [
-    ".RR...........",
-    ".RR........RRR",
-    "..R........R..",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    ".R.R..RR..R.R.",
-    "R..R..RR..R..R",
-]
-
-let rightUpLeftDown = [
-    "...........RR.",
-    "RRR........RR.",
-    ".R.........R..",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    "R..R..RR..R..R",
-    ".R.R..RR..R.R.",
-]
-
 // dormindo: "Zzz" flutuando (dois quadros, o Z sobe)
 let sleepFx1 = [
     "..........WWW.",
