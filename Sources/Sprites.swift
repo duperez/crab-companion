@@ -140,6 +140,33 @@ let deitadoV2 = [
     "..r..r..r..r..",
 ]
 
+// nuvem mágica: o Craby se materializa ao chegar num novo Space
+let cloudDense = [
+    "..............",
+    "....WWWWWW....",
+    "..WWLLLLLLWW..",
+    ".WLLWWWWWWLLW.",
+    ".WLWWWWWWWWLW.",
+    "..WWLLLLLLWW..",
+    "....WWWWWW....",
+    "..............",
+    "..............",
+    "..............",
+]
+
+let cloudSparse = [
+    "..............",
+    "..W.....W.....",
+    ".....W.....W..",
+    "..W....W......",
+    "......W....W..",
+    "...W......W...",
+    "..............",
+    "..............",
+    "..............",
+    "..............",
+]
+
 let clawsUp = [
     ".RR........RR.",
     ".RR........RR.",

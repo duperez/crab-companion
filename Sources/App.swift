@@ -174,6 +174,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         setupStatusItem()
         addonManager.scan()
+
+        // troca de Space: o macOS esconde a janela durante o gesto (sem
+        // aviso prévio) — na chegada, o Craby se materializa da nuvenzinha
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self, self.floatingVisible, !self.hiddenForSharing,
+                  self.quirk.isEmpty else { return }
+            self.play(.hatch)
+            self.startQuirk([emptyFx + cloudDense, emptyFx + cloudSparse])
+        }
         applyState(.idle)
 
         // reavalia sessões periodicamente (comemoração expira, sessões mortas somem)
