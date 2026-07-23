@@ -98,7 +98,10 @@ final class ControlServer {
 
     static func respond(_ conn: NWConnection, body: String, status: String = "200 OK") {
         let data = body.data(using: .utf8)!
-        let response = "HTTP/1.1 \(status)\r\nContent-Length: \(data.count)\r\nConnection: close\r\n\r\n"
+        let type = body.hasPrefix("<!doctype") ? "text/html; charset=utf-8"
+            : body.hasPrefix("{") ? "application/json"
+            : "text/plain; charset=utf-8"
+        let response = "HTTP/1.1 \(status)\r\nContent-Type: \(type)\r\nContent-Length: \(data.count)\r\nConnection: close\r\n\r\n"
         conn.send(content: response.data(using: .utf8)! + data,
                   completion: .contentProcessed { _ in conn.cancel() })
     }

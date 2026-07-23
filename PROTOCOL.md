@@ -26,6 +26,12 @@ the structured ones.
 
 Base URL: `http://localhost:4923`
 
+### Playground (try it out)
+
+Open `http://localhost:4923` in a browser: a self-served page with buttons and
+forms for every endpoint below — states, events, watches, celebrations and
+question bubbles. Great for demos and for testing a new integration by hand.
+
 ### Structured event (preferred)
 
 ```

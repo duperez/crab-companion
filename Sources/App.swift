@@ -188,6 +188,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     guard let self else { return nil }
                     if command == "quit" { NSApp.terminate(nil); return nil }
                     if command == "status" { return self.statusJSON() }
+                    // GET / — playground pra testar o protocolo no navegador
+                    if command.isEmpty || command == "playground" {
+                        return playgroundHTML
+                    }
                     if command == "subagent-start" {
                         self.babyBorn(session: query["session"] ?? "default")
                         return nil
