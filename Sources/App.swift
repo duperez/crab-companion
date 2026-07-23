@@ -152,9 +152,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         window.backgroundColor = .clear
         window.hasShadow = false
         window.level = .floating
-        // canJoinAllSpaces: existe em todos os desktops virtuais
-        // fullScreenAuxiliary: aparece também sobre apps em tela cheia
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        // moveToActiveSpace: o pet mora num Space só e se TELETRANSPORTA na
+        // troca — durante o swipe ele desliza embora com a tela antiga, e na
+        // nova se materializa da nuvem (ver activeSpaceDidChange)
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = false
 
         petView = PetView(frame: NSRect(x: 0, y: 0, width: width, height: height))
@@ -181,11 +182,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             forName: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
-            guard let self, self.floatingVisible, !self.hiddenForSharing,
-                  self.quirk.isEmpty else { return }
-            self.play(.hatch)
+            guard let self, self.floatingVisible, !self.hiddenForSharing
+            else { return }
+            // some da tela nova ANTES de qualquer quadro do caranguejo vazar,
+            // e volta já vestido de nuvem
+            self.window.orderOut(nil)
             self.startFastQuirk(
                 [emptyFx + cloudDense, emptyFx + cloudSparse], interval: 0.15)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                guard let self, self.floatingVisible, !self.hiddenForSharing
+                else { return }
+                self.window.orderFrontRegardless()
+                self.play(.hatch)
+            }
         }
         applyState(.idle)
 
