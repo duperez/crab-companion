@@ -83,19 +83,24 @@ let playgroundHTML = #"""
   <button class="alt" onclick="status()">GET /status</button>
 </div>
 
-<h2>🧩 Criar addon (desenhe o prop na cena)</h2>
+<h2>🧩 Criar addon (desenhe os props na cena)</h2>
 <div class="card">
   <input id="abName" value="meu-addon" size="10" title="nome">
+  <input id="abDesc" value="o que ele faz" size="16" title="descrição">
   <input id="abSource" value="minha-fonte" size="10" title="source">
-  <select id="abScene"></select>
-  <select id="abSlot"></select>
-  <span id="abPal"></span>
-  <button class="alt" onclick="abErase=true">borracha</button>
+  <input id="abExec" value="run.sh" size="7" title="executável">
+  <input id="abInterval" value="30" size="3" title="intervalo (s)">
+  <select id="abScene" title="cena"></select>
+  <div style="margin-top:6px">
+    <span id="abPal"></span>
+    <button class="alt" onclick="abErase=true">borracha</button>
+  </div>
   <div id="abGrid" style="line-height:0; margin-top:8px"></div>
   <button onclick="abExport()">gerar addon.json</button>
-  <div><small>células com borda amarela = o slot; clique pra pintar.
-  Salve o JSON em <code>~/Library/Application Support/Craby/addons/&lt;nome&gt;/addon.json</code>
-  junto de um <code>run.sh</code> executável e ative no menu 🦀.</small></div>
+  <div><small>todas as áreas com borda amarela são slots (mão, chão, mesa,
+  cabeça, céu…) — pinte em quantos quiser; só os desenhados entram no JSON.
+  Salve em <code>~/Library/Application Support/Craby/addons/&lt;nome&gt;/addon.json</code>
+  junto do executável e ative no menu 🦀.</small></div>
 </div>
 
 <h2>Resposta</h2>
@@ -154,15 +159,18 @@ let playgroundHTML = #"""
     });
     abBuild();
   });
+  // encontra o slot que contém a célula (primeiro que bater)
+  function abSlotAt(scene, x, y) {
+    for (const [name, s] of Object.entries(scene.slots)) {
+      if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) {
+        return [name, s];
+      }
+    }
+    return null;
+  }
   function abBuild() {
     const scene = abData.scenes[document.getElementById('abScene').value];
-    const slotSel = document.getElementById('abSlot');
-    const current = slotSel.value;
-    slotSel.innerHTML = '';
-    Object.keys(scene.slots).forEach(n => slotSel.add(new Option(n, n)));
-    if (scene.slots[current]) slotSel.value = current;
-    const slot = scene.slots[slotSel.value];
-    abCells = {};
+    abCells = {}; // "slot:linha:coluna" -> caractere
     const grid = document.getElementById('abGrid');
     grid.innerHTML = '';
     scene.frame.forEach((row, y) => {
@@ -172,13 +180,14 @@ let playgroundHTML = #"""
         cell.style.cssText = 'display:inline-block;width:18px;height:18px;'
           + 'border:1px solid #333;box-sizing:border-box;';
         cell.style.background = abData.palette[ch] || '#1c1c1e';
-        const inSlot = slot && x >= slot.x && x < slot.x + slot.w
-          && y >= slot.y && y < slot.y + slot.h;
-        if (inSlot) {
+        const hit = abSlotAt(scene, x, y);
+        if (hit) {
+          const [slotName, s] = hit;
+          cell.title = slotName;
           cell.style.borderColor = '#f6b73c';
           cell.style.cursor = 'pointer';
           cell.onclick = () => {
-            const key = (y - slot.y) + ':' + (x - slot.x);
+            const key = slotName + ':' + (y - s.y) + ':' + (x - s.x);
             if (abErase) { delete abCells[key]; cell.style.background =
               abData.palette[ch] || '#1c1c1e'; }
             else { abCells[key] = abChar; cell.style.background =
@@ -191,20 +200,29 @@ let playgroundHTML = #"""
     });
   }
   function abExport() {
-    const scene = document.getElementById('abScene').value;
-    const slotName = document.getElementById('abSlot').value;
-    const slot = abData.scenes[scene].slots[slotName];
-    const rows = [];
-    for (let y = 0; y < slot.h; y++) {
-      let row = '';
-      for (let x = 0; x < slot.w; x++) row += abCells[y + ':' + x] || '.';
-      rows.push(row);
+    const sceneName = document.getElementById('abScene').value;
+    const scene = abData.scenes[sceneName];
+    const props = {};
+    for (const [slotName, s] of Object.entries(scene.slots)) {
+      const rows = [];
+      let painted = false;
+      for (let y = 0; y < s.h; y++) {
+        let row = '';
+        for (let x = 0; x < s.w; x++) {
+          const ch = abCells[slotName + ':' + y + ':' + x] || '.';
+          if (ch !== '.') painted = true;
+          row += ch;
+        }
+        rows.push(row);
+      }
+      while (rows.length && !rows[rows.length - 1].replace(/\./g, '')) rows.pop();
+      if (painted) props[slotName] = rows;
     }
-    while (rows.length && !rows[rows.length - 1].replace(/\./g, '')) rows.pop();
     const manifest = {
-      name: v('abName'), description: 'feito no playground',
-      exec: 'run.sh', source: v('abSource'), interval: 30,
-      scene, props: { [slotName]: rows },
+      name: v('abName'), description: v('abDesc'),
+      exec: v('abExec'), source: v('abSource'),
+      interval: parseInt(v('abInterval')) || 30,
+      scene: sceneName, props,
     };
     show(JSON.stringify(manifest, null, 2));
   }

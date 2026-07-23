@@ -28,24 +28,33 @@ final class AddonManager {
     private(set) var addons: [LoadedAddon] = []
     private var timers: [String: Timer] = [:]
 
-    // pastas escaneadas: Resources/addons (embutidos), Application Support/
-    // Craby/addons (do usuário) e ./addons ao lado do binário (dev)
-    private var searchDirs: [URL] {
-        var dirs: [URL] = []
+    // todos os addons vivem na pasta do usuário — os embutidos são SEMENTES:
+    // na primeira execução são copiados pra lá, como exemplos editáveis
+    private func seedDefaults() {
+        let fm = FileManager.default
+        try? fm.createDirectory(at: userAddonsDir, withIntermediateDirectories: true)
+        var seedDirs: [URL] = []
         if let res = Bundle.main.resourceURL {
-            dirs.append(res.appendingPathComponent("addons"))
+            seedDirs.append(res.appendingPathComponent("addons"))
         }
-        let support = FileManager.default.urls(
-            for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Craby/addons")
-        try? FileManager.default.createDirectory(
-            at: support, withIntermediateDirectories: true)
-        dirs.append(support)
-        let binDir = URL(fileURLWithPath: CommandLine.arguments[0])
-            .deletingLastPathComponent().appendingPathComponent("addons")
-        dirs.append(binDir)
-        return dirs
+        seedDirs.append(
+            URL(fileURLWithPath: CommandLine.arguments[0])
+                .deletingLastPathComponent().appendingPathComponent("addons"))
+        for dir in seedDirs {
+            guard let entries = try? fm.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: nil) else { continue }
+            for entry in entries {
+                let dest = userAddonsDir.appendingPathComponent(entry.lastPathComponent)
+                guard !fm.fileExists(atPath: dest.path),
+                      fm.fileExists(
+                        atPath: entry.appendingPathComponent("addon.json").path)
+                else { continue }
+                try? fm.copyItem(at: entry, to: dest)
+            }
+        }
     }
+
+    private var searchDirs: [URL] { [userAddonsDir] }
 
     var userAddonsDir: URL {
         FileManager.default.urls(
@@ -54,6 +63,7 @@ final class AddonManager {
     }
 
     func scan() {
+        seedDefaults()
         var found: [LoadedAddon] = []
         var seen = Set<String>()
         for dir in searchDirs {
@@ -134,9 +144,13 @@ final class AddonManager {
         guard let addon = addons.first(where: { $0.sourceName == source }),
               let declared = addon.manifest.props, !declared.isEmpty
         else { return nil }
+        // o addon pode vestir QUALQUER cena do catálogo
         let scene: Scene
         switch addon.manifest.scene {
+        case "idle": scene = sceneIdle
         case "debrucado": scene = sceneDebrucado
+        case "comemorando": scene = sceneComemorando
+        case "deitado": scene = sceneDeitado
         default: scene = sceneAtento
         }
         let props = declared.map { slot, grid in

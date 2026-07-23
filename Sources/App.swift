@@ -1193,7 +1193,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         func sceneDict(_ scene: Scene) -> [String: Any] {
             var slots: [String: Any] = [:]
-            for (name, slot) in scene.slots where name != "cabeca" {
+            for (name, slot) in scene.slots {
                 slots[name] = [
                     "x": slot.pos[0].x, "y": slot.pos[0].y,
                     "w": slot.maxW, "h": slot.maxH,
@@ -1204,8 +1204,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let payload: [String: Any] = [
             "palette": palette,
             "scenes": [
+                "idle": sceneDict(sceneIdle),
                 "atento": sceneDict(sceneAtento),
                 "debrucado": sceneDict(sceneDebrucado),
+                "comemorando": sceneDict(sceneComemorando),
+                "deitado": sceneDict(sceneDeitado),
             ],
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
