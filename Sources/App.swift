@@ -109,6 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var planWindows: [PlanWindow] = []
     var planTimer: Timer?
     let planClient = PlanUsageClient()
+    let addonManager = AddonManager()
 
     // ninhada de subagentes
     var babies: [Baby] = []
@@ -172,6 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         setupStatusItem()
+        addonManager.scan()
         applyState(.idle)
 
         // reavalia sessões periodicamente (comemoração expira, sessões mortas somem)
@@ -195,6 +197,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     if command.isEmpty || command == "playground" {
                         return playgroundHTML
                     }
+                    // dados p/ o construtor de addons do playground
+                    if command == "scenes" { return scenesJSON() }
                     if command == "subagent-start" {
                         self.babyBorn(session: query["session"] ?? "default")
                         return nil
@@ -786,6 +790,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(broodItem)
         }
 
+        // addons: liga/desliga + pasta
+        addonManager.scan()
+        if !addonManager.addons.isEmpty {
+            let header = NSMenuItem(title: "🧩 Addons:", action: nil, keyEquivalent: "")
+            header.isEnabled = false
+            menu.addItem(header)
+            for (i, addon) in addonManager.addons.enumerated() {
+                let item = NSMenuItem(
+                    title: "   \(addon.manifest.name)"
+                        + (addon.manifest.description.map { " — \($0)" } ?? ""),
+                    action: #selector(toggleAddon(_:)), keyEquivalent: "")
+                item.target = self
+                item.tag = i
+                item.state = addonManager.isEnabled(addon) ? .on : .off
+                menu.addItem(item)
+            }
+        }
+        let addonsFolder = NSMenuItem(
+            title: L.openAddonsFolder, action: #selector(openAddonsFolder),
+            keyEquivalent: "")
+        addonsFolder.target = self
+        menu.addItem(addonsFolder)
+        menu.addItem(NSMenuItem.separator())
+
         // itens sob vigília: clicáveis quando têm URL
         if !watches.isEmpty {
             let watchHeader = NSMenuItem(
@@ -1148,6 +1176,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         var y = pet.minY - panel.frame.height - 4
         if y < area.minY + 4 { y = pet.maxY + 4 }
         panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    // cenas + slots + paleta em JSON (construtor visual de addons)
+    func scenesJSON() -> String {
+        func hex(_ color: NSColor) -> String {
+            let c = color.usingColorSpace(.deviceRGB) ?? color
+            return String(
+                format: "#%02x%02x%02x",
+                Int(c.redComponent * 255), Int(c.greenComponent * 255),
+                Int(c.blueComponent * 255))
+        }
+        var palette: [String: String] = [:]
+        for (ch, color) in defaultPalette { palette[String(ch)] = hex(color) }
+        for (ch, color) in customPalette { palette[String(ch)] = hex(color) }
+
+        func sceneDict(_ scene: Scene) -> [String: Any] {
+            var slots: [String: Any] = [:]
+            for (name, slot) in scene.slots where name != "cabeca" {
+                slots[name] = [
+                    "x": slot.pos[0].x, "y": slot.pos[0].y,
+                    "w": slot.maxW, "h": slot.maxH,
+                ]
+            }
+            return ["frame": scene.frames[0], "slots": slots]
+        }
+        let payload: [String: Any] = [
+            "palette": palette,
+            "scenes": [
+                "atento": sceneDict(sceneAtento),
+                "debrucado": sceneDict(sceneDebrucado),
+            ],
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let json = String(data: data, encoding: .utf8) else { return "{}" }
+        return json
+    }
+
+    @objc func toggleAddon(_ sender: NSMenuItem) {
+        guard sender.tag < addonManager.addons.count else { return }
+        let addon = addonManager.addons[sender.tag]
+        addonManager.setEnabled(addon, !addonManager.isEnabled(addon))
+    }
+
+    @objc func openAddonsFolder() {
+        NSWorkspace.shared.open(addonManager.userAddonsDir)
     }
 
     @objc func watchItemClicked(_ sender: NSMenuItem) {
@@ -1634,6 +1707,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let order = config.sourcePriority ?? ["ci", "docker"]
         let winner = order.first(where: { active.contains($0) })
             ?? active.sorted().first
+        // figurino declarado pelo addon vence; senão, defaults por fonte
+        if let winner, let outfit = addonManager.outfit(for: winner) {
+            return (0..<outfit.scene.frames.count).map {
+                compose(scene: outfit.scene, props: outfit.props, frame: $0)
+            }
+        }
         let props: [Prop]
         switch winner {
         case "docker": props = [propCaixote]

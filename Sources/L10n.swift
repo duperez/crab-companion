@@ -91,6 +91,9 @@ enum L {
     }
 
     static var about: String { tr("About Craby", "Sobre o Craby", "Acerca de Craby") }
+    static var openAddonsFolder: String {
+        tr("Open addons folder…", "Abrir pasta de addons…", "Abrir carpeta de addons…")
+    }
     static func updateAvailable(_ v: String) -> String {
         tr("Update available: v\(v)", "Atualização disponível: v\(v)",
            "Actualización disponible: v\(v)")

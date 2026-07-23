@@ -28,6 +28,7 @@ cp ask.sh notify.sh setup.sh bin/craby "$APP/Contents/Resources/"
 chmod +x "$APP/Contents/Resources/ask.sh" "$APP/Contents/Resources/notify.sh" \
   "$APP/Contents/Resources/setup.sh" "$APP/Contents/Resources/craby"
 cp "$TMP/crab.icns" "$APP/Contents/Resources/crab.icns"
+cp -R addons "$APP/Contents/Resources/addons"
 cat > "$APP/Contents/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

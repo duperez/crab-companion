@@ -1,0 +1,9 @@
+{
+  "name": "live-watch",
+  "description": "vigia portas, PIDs e containers",
+  "exec": "run.sh",
+  "source": "docker",
+  "interval": 20,
+  "scene": "atento",
+  "props": { "chao": ["GGGG", "GCCG", "GGGG"] }
+}

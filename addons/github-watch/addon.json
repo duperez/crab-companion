@@ -1,0 +1,9 @@
+{
+  "name": "github-watch",
+  "description": "CI do GitHub no pet (gh)",
+  "exec": "run.sh",
+  "source": "ci",
+  "interval": 30,
+  "scene": "atento",
+  "props": { "garra": ["CW.", "CCG", "..G"] }
+}

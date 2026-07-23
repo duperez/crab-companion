@@ -83,6 +83,21 @@ let playgroundHTML = #"""
   <button class="alt" onclick="status()">GET /status</button>
 </div>
 
+<h2>🧩 Criar addon (desenhe o prop na cena)</h2>
+<div class="card">
+  <input id="abName" value="meu-addon" size="10" title="nome">
+  <input id="abSource" value="minha-fonte" size="10" title="source">
+  <select id="abScene"></select>
+  <select id="abSlot"></select>
+  <span id="abPal"></span>
+  <button class="alt" onclick="abErase=true">borracha</button>
+  <div id="abGrid" style="line-height:0; margin-top:8px"></div>
+  <button onclick="abExport()">gerar addon.json</button>
+  <div><small>células com borda amarela = o slot; clique pra pintar.
+  Salve o JSON em <code>~/Library/Application Support/Craby/addons/&lt;nome&gt;/addon.json</code>
+  junto de um <code>run.sh</code> executável e ative no menu 🦀.</small></div>
+</div>
+
 <h2>Resposta</h2>
 <div id="out">—</div>
 
@@ -118,6 +133,80 @@ let playgroundHTML = #"""
   async function status() {
     try { show(JSON.stringify(await (await fetch('/status')).json(), null, 2)); }
     catch (e) { show('erro: ' + e); }
+  }
+
+  // ---- construtor de addons ----
+  let abData = null, abChar = 'C', abErase = false, abCells = {};
+  fetch('/scenes').then(r => r.json()).then(d => {
+    abData = d;
+    const sc = document.getElementById('abScene');
+    Object.keys(d.scenes).forEach(n => sc.add(new Option(n, n)));
+    sc.onchange = abBuild;
+    document.getElementById('abSlot').onchange = abBuild;
+    const pal = document.getElementById('abPal');
+    Object.entries(d.palette).forEach(([ch, hex]) => {
+      const b = document.createElement('button');
+      b.textContent = ch;
+      b.style.background = hex;
+      b.style.color = '#fff';
+      b.onclick = () => { abChar = ch; abErase = false; };
+      pal.appendChild(b);
+    });
+    abBuild();
+  });
+  function abBuild() {
+    const scene = abData.scenes[document.getElementById('abScene').value];
+    const slotSel = document.getElementById('abSlot');
+    const current = slotSel.value;
+    slotSel.innerHTML = '';
+    Object.keys(scene.slots).forEach(n => slotSel.add(new Option(n, n)));
+    if (scene.slots[current]) slotSel.value = current;
+    const slot = scene.slots[slotSel.value];
+    abCells = {};
+    const grid = document.getElementById('abGrid');
+    grid.innerHTML = '';
+    scene.frame.forEach((row, y) => {
+      const line = document.createElement('div');
+      row.split('').forEach((ch, x) => {
+        const cell = document.createElement('span');
+        cell.style.cssText = 'display:inline-block;width:18px;height:18px;'
+          + 'border:1px solid #333;box-sizing:border-box;';
+        cell.style.background = abData.palette[ch] || '#1c1c1e';
+        const inSlot = slot && x >= slot.x && x < slot.x + slot.w
+          && y >= slot.y && y < slot.y + slot.h;
+        if (inSlot) {
+          cell.style.borderColor = '#f6b73c';
+          cell.style.cursor = 'pointer';
+          cell.onclick = () => {
+            const key = (y - slot.y) + ':' + (x - slot.x);
+            if (abErase) { delete abCells[key]; cell.style.background =
+              abData.palette[ch] || '#1c1c1e'; }
+            else { abCells[key] = abChar; cell.style.background =
+              abData.palette[abChar]; }
+          };
+        }
+        line.appendChild(cell);
+      });
+      grid.appendChild(line);
+    });
+  }
+  function abExport() {
+    const scene = document.getElementById('abScene').value;
+    const slotName = document.getElementById('abSlot').value;
+    const slot = abData.scenes[scene].slots[slotName];
+    const rows = [];
+    for (let y = 0; y < slot.h; y++) {
+      let row = '';
+      for (let x = 0; x < slot.w; x++) row += abCells[y + ':' + x] || '.';
+      rows.push(row);
+    }
+    while (rows.length && !rows[rows.length - 1].replace(/\./g, '')) rows.pop();
+    const manifest = {
+      name: v('abName'), description: 'feito no playground',
+      exec: 'run.sh', source: v('abSource'), interval: 30,
+      scene, props: { [slotName]: rows },
+    };
+    show(JSON.stringify(manifest, null, 2));
   }
 </script>
 </body>
