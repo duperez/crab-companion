@@ -1,0 +1,27 @@
+#!/bin/sh
+# Craby comemora seus git pushes com confete 🎉
+#
+# O git não tem hook "post-push"; o pre-push dispara no momento do push,
+# que é festa suficiente. Se o push falhar, foi só um confete otimista.
+#
+# Instalar neste repositório:
+#   cp examples/git-hooks/pre-push .git/hooks/pre-push
+#   chmod +x .git/hooks/pre-push
+#
+# Ou para TODOS os seus repositórios:
+#   mkdir -p ~/.config/git/hooks
+#   cp examples/git-hooks/pre-push ~/.config/git/hooks/pre-push
+#   chmod +x ~/.config/git/hooks/pre-push
+#   git config --global core.hooksPath ~/.config/git/hooks
+#   (atenção: core.hooksPath substitui os hooks locais dos repositórios)
+#
+# Craby desligado? O curl falha em silêncio e o push segue normal.
+
+repo=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null)
+[ -n "$repo" ] || repo="repo"
+
+curl -s --max-time 2 --get \
+  --data-urlencode "text=Push em $repo! 🎉" \
+  "http://localhost:4923/celebrate" >/dev/null 2>&1 || true
+
+exit 0

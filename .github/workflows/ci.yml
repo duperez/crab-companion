@@ -17,7 +17,8 @@ jobs:
       - name: Run tests
         run: |
           swiftc Sources/Sprites.swift Sources/HTTPServer.swift Sources/L10n.swift \
-            Sources/Sounds.swift Sources/Stats.swift Tests/main.swift -o run_tests
+            Sources/Sounds.swift Sources/Stats.swift Sources/PlanUsage.swift \
+            Tests/main.swift -o run_tests
           ./run_tests
 
   shellcheck:
@@ -25,4 +26,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Shellcheck
-        run: shellcheck install.sh uninstall.sh setup.sh package.sh ask.sh notify.sh examples/craby-run bin/craby
+        run: shellcheck install.sh uninstall.sh setup.sh package.sh ask.sh notify.sh examples/craby-run examples/git-hooks/pre-push bin/craby

@@ -21,6 +21,9 @@ struct AskPayload: Codable {
     // nenhum dos dois = modo permissão (Permitir/Negar/Terminal)
     let options: [String]?
     let input: Bool?
+    // modo permissão: regra de allowlist sugerida (ex. "Bash(git *)") —
+    // habilita o botão "Sempre permitir"; quem grava a regra é o ask.sh
+    var rule: String? = nil
 }
 
 struct HTTPRequest {

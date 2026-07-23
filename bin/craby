@@ -15,6 +15,7 @@ uso:
   craby ask "pergunta" "op A" "op B"    múltipla escolha no balão (imprime a escolhida)
   craby input "pergunta"                texto livre no balão (imprime a resposta)
   craby answer <allow|deny|ask|opt:N|txt:...>   responde o balão atual
+  craby celebrate ["texto"]             confete + toast (ex.: após git push)
   craby quit                            encerra o app
 EOF
 }
@@ -56,6 +57,9 @@ case "$cmd" in
       txt:*) echo "${resp#txt:}" ;;
       *) echo "$resp" ;;
     esac
+    ;;
+  celebrate)
+    curl -s -m 2 --get --data-urlencode "text=${1:-}" "$S/celebrate" && echo
     ;;
   answer)
     [ $# -ge 1 ] || { echo "erro: craby answer <allow|deny|ask|opt:N|txt:...>" >&2; exit 1; }

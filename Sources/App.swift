@@ -84,7 +84,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var lastEventAt = Date()
     var availableUpdate: String?
     var updateTimer: Timer?
-    let appVersion = "1.5.0"
+    let appVersion = "1.6.0"
+
+    // uso do plano Claude (janelas 5h/semana); vazio = sem token/indisponível
+    var planWindows: [PlanWindow] = []
+    var planTimer: Timer?
+    let planClient = PlanUsageClient()
 
     // ninhada de subagentes
     var babies: [Baby] = []
@@ -181,6 +186,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                         self.answerCurrentAsk(String(command.dropFirst("answer/".count)))
                         return nil
                     }
+                    if command == "celebrate" {
+                        self.celebrate(query["text"])
+                        return nil
+                    }
                     if let newState = PetState(rawValue: command) {
                         self.sessionEvent(
                             newState,
@@ -221,6 +230,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         babyTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) {
             [weak self] _ in self?.babyTick()
+        }
+
+        // uso do plano: 1ª consulta 10s após abrir, depois a cada 5min
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            self?.refreshPlan()
+        }
+        planTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) {
+            [weak self] _ in self?.refreshPlan()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Uso do plano: janela de 5h e semana, direto da conta Claude
+    // ------------------------------------------------------------------
+
+    func refreshPlan() {
+        planClient.fetch { [weak self] windows in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.planWindows = windows ?? []
+                self.updateTooltip()
+                self.render() // o suor de "plano quase cheio" pode mudar
+            }
+        }
+    }
+
+    var planFiveHour: PlanWindow? {
+        planWindows.first { $0.key == "five_hour" }
+    }
+
+    // plano apertado: 80%+ da janela de 5h consumida -> Craby fica ofegante
+    var planStrained: Bool {
+        (planFiveHour?.utilization ?? 0) >= 80
+    }
+
+    func planLines() -> [String] {
+        planWindows.compactMap { w in
+            let pct = Int(w.utilization)
+            var reset = ""
+            if let at = w.resetsAt {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                reset = formatter.string(from: at)
+            }
+            switch w.key {
+            case "five_hour": return L.plan5h(pct, reset: reset)
+            case "seven_day": return L.planWeek(pct)
+            case "seven_day_opus": return nil // só interessa a quem usa; some
+            default: return "\(w.key): \(pct)%"
+            }
         }
     }
 
@@ -675,6 +734,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(broodItem)
         }
 
+        // janelas do plano Claude (só aparece se houver token disponível)
+        for line in planLines() {
+            let planItem = NSMenuItem(
+                title: (planStrained ? "🥵 " : "🔋 ") + line,
+                action: nil, keyEquivalent: "")
+            planItem.isEnabled = false
+            menu.addItem(planItem)
+        }
+
         let eventsItem = NSMenuItem(title: L.recentEvents, action: nil, keyEquivalent: "")
         let eventsMenu = NSMenu()
         let events = stats.recentEvents()
@@ -906,9 +974,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateTooltip() {
+        let planSuffix = planLines().isEmpty
+            ? "" : "\n" + planLines().joined(separator: "\n")
         let active = sessions.filter { $0.value.state != .idle }
         if active.isEmpty {
-            petView.toolTip = L.allCalm
+            petView.toolTip = L.allCalm + planSuffix
             return
         }
         let now = Date()
@@ -929,7 +999,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 return line
             }
             .sorted()
-            .joined(separator: "\n")
+            .joined(separator: "\n") + planSuffix
     }
 
     private var workingCount: Int {
@@ -956,7 +1026,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func overlaySweat(_ grid: [String]) -> [String] {
-        guard isSweating else { return grid }
+        // sua por esforço contínuo OU por plano quase esgotado (ofegante)
+        guard isSweating || (planStrained && state != .sleeping) else { return grid }
         var g = grid
         var row = Array(g[2])
         row[12] = "C"
@@ -986,6 +1057,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         stats.recordLevelUp()
         play(.levelUp)
         startQuirk(levelUpFrames + levelUpFrames)
+    }
+
+    // festa avulsa (ex.: git push via hook pre-push) — confete + toast
+    func celebrate(_ text: String?) {
+        lastEventAt = Date() // acorda o Craby se estiver dormindo
+        play(.levelUp)
+        startQuirk(levelUpFrames + levelUpFrames)
+        showToast(text?.isEmpty == false ? text! : L.pushParty)
     }
 
     // ------------------------------------------------------------------
@@ -1110,6 +1189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func answerCurrentAsk(_ answer: String) {
         guard let current = currentAsk else { return }
         var valid = ["allow", "deny", "ask"].contains(answer)
+        if answer == "always", current.payload.rule != nil { valid = true }
         if answer.hasPrefix("opt:"), let i = Int(answer.dropFirst(4)),
            let options = current.payload.options, (0..<options.count).contains(i) {
             valid = true
@@ -1144,7 +1224,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else if isQuestion {
             h = 10 + 16 + 4 + 46 + 6 + CGFloat(optionCount) * 30 + 26 + 10
         } else {
-            h = bubbleHeight
+            // +30 pra linha do "Sempre permitir" quando há regra sugerida
+            h = bubbleHeight + (ask.rule != nil ? 30 : 0)
         }
         let petFrame = window.frame
         let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
@@ -1256,6 +1337,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     width: buttonWidth, height: 24)
                 container.addSubview(button)
             }
+            // "Sempre permitir (regra)": grava na allowlist e permite
+            if let rule = ask.rule {
+                let always = FirstClickButton(
+                    title: "\(L.alwaysAllow)  ·  \(rule)",
+                    target: self, action: #selector(alwaysButtonClicked(_:)))
+                always.bezelStyle = .rounded
+                always.controlSize = .small
+                always.font = .systemFont(ofSize: 11)
+                always.lineBreakMode = .byTruncatingTail
+                always.frame = NSRect(x: 12, y: 40, width: w - 24, height: 24)
+                container.addSubview(always)
+            }
         }
 
         bubble.contentView = container
@@ -1283,11 +1376,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard digit <= options.count else { return false }
             answerCurrentAsk("opt:\(digit - 1)")
         } else {
+            // 4 = "Sempre permitir" (só quando há regra sugerida)
+            if digit == 4, current.payload.rule != nil {
+                answerCurrentAsk("always")
+                return true
+            }
             guard digit <= 3 else { return false }
             if digit == 3 { focusClaudeApp() }
             answerCurrentAsk(["allow", "deny", "ask"][digit - 1])
         }
         return true
+    }
+
+    @objc func alwaysButtonClicked(_ sender: NSButton) {
+        answerCurrentAsk("always")
     }
 
     @objc func permissionButtonClicked(_ sender: NSButton) {

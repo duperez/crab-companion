@@ -125,6 +125,54 @@ let decodedDay = try? JSONDecoder().decode(DayStats.self, from: oldDay.data(usin
 check(decodedDay?.tasks == 3, "DayStats antigo decodifica sem maxBrood")
 check(decodedDay?.maxBrood == nil, "maxBrood ausente vira nil")
 
+// --- balão de permissão: regra do "Sempre permitir" ---
+
+let rulePayload = """
+{"title":"t","detail":"d","urgent":false,"options":null,"input":null,"rule":"Bash(git *)"}
+"""
+let decodedRule = try? JSONDecoder().decode(
+    AskPayload.self, from: rulePayload.data(using: .utf8)!)
+check(decodedRule?.rule == "Bash(git *)", "AskPayload: decodifica rule")
+
+let noRulePayload = """
+{"title":"t","detail":"d","urgent":false,"options":null,"input":null}
+"""
+let decodedNoRule = try? JSONDecoder().decode(
+    AskPayload.self, from: noRulePayload.data(using: .utf8)!)
+check(decodedNoRule != nil, "AskPayload: payload antigo sem rule ainda decodifica")
+check(decodedNoRule?.rule == nil, "AskPayload: rule ausente vira nil")
+
+// --- uso do plano: parse defensivo do endpoint OAuth ---
+
+let planJSON = """
+{"five_hour":{"utilization":84,"resets_at":"2026-07-22T16:32:00Z"},
+ "seven_day":{"utilization":31.5,"resets_at":"2026-07-25T00:00:00Z"},
+ "extra_field":"ignorado"}
+"""
+let windows = PlanUsageClient.parseWindows(planJSON.data(using: .utf8)!)
+check(windows?.count == 2, "plano: extrai as duas janelas e ignora o resto")
+check(windows?.first?.key == "five_hour", "plano: five_hour vem primeiro")
+check(windows?.first?.utilization == 84, "plano: utilization inteira vira Double")
+check(windows?.first?.resetsAt != nil, "plano: resets_at ISO8601 parseia")
+check(PlanUsageClient.parseWindows(Data("nada".utf8)) == nil,
+      "plano: resposta inválida vira nil")
+check(PlanUsageClient.parseWindows(Data("{}".utf8)) == nil,
+      "plano: sem janelas vira nil")
+
+let tokenJSON = """
+{"claudeAiOauth":{"accessToken":"sk-teste-123"}}
+"""
+check(PlanUsageClient.parseToken(tokenJSON.data(using: .utf8)!) == "sk-teste-123",
+      "plano: token extraído do credentials.json")
+check(PlanUsageClient.parseToken(Data("  sk-cru-456\n".utf8)) == "sk-cru-456",
+      "plano: arquivo com token puro funciona")
+
+// --- L10n das novidades ---
+
+check(!L.alwaysAllow.isEmpty, "L10n: alwaysAllow existe")
+check(L.plan5h(84, reset: "16:32").contains("84"), "L10n: plan5h mostra o percentual")
+check(!L.pushParty.isEmpty, "L10n: pushParty existe")
+
 // --- resultado ---
 
 print(failures == 0 ? "\ntodos os testes passaram" : "\n\(failures) falha(s)")

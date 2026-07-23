@@ -23,6 +23,21 @@ enum L {
     static var allow: String { tr("Allow", "Permitir", "Permitir") }
     static var deny: String { tr("Deny", "Negar", "Denegar") }
     static var terminal: String { tr("Terminal", "Terminal", "Terminal") }
+    static var alwaysAllow: String {
+        tr("Always allow", "Sempre permitir", "Permitir siempre")
+    }
+    static func plan5h(_ pct: Int, reset: String) -> String {
+        let tail = reset.isEmpty
+            ? "" : tr(" · resets \(reset)", " · reseta \(reset)", " · reinicia \(reset)")
+        return tr("5h session: \(pct)%", "Sessão (5h): \(pct)%", "Sesión (5h): \(pct)%")
+            + tail
+    }
+    static func planWeek(_ pct: Int) -> String {
+        tr("Week: \(pct)%", "Semana: \(pct)%", "Semana: \(pct)%")
+    }
+    static var pushParty: String {
+        tr("Pushed! 🎉", "Push feito! 🎉", "¡Push hecho! 🎉")
+    }
     static var answerInTerminal: String {
         tr("Answer in the terminal", "Responder no terminal", "Responder en la terminal")
     }
