@@ -16,6 +16,9 @@ struct SceneSlot {
     let pos: [(x: Int, y: Int)] // uma âncora por quadro da cena
     let maxW: Int
     let maxH: Int
+    // atrás: o prop só pinta onde a cena é transparente (ex.: laptop atrás
+    // das mãos que digitam); na frente (padrão): pinta por cima do corpo
+    var behind: Bool = false
 }
 
 struct Scene {
@@ -44,7 +47,22 @@ func stamp(_ small: [String], onto grid: [String], x: Int, y: Int) -> [String] {
     return g.map { String($0) }
 }
 
-// compõe um quadro: cena + props nos slots (âncora do quadro corrente)
+// carimba atrás: só pinta onde a grade ainda é transparente
+func stampBehind(_ small: [String], onto grid: [String], x: Int, y: Int) -> [String] {
+    var g = grid.map { Array($0) }
+    for (r, row) in small.enumerated() {
+        for (c, ch) in row.enumerated() where ch != "." {
+            let rr = y + r
+            let cc = x + c
+            guard rr >= 0, rr < g.count, cc >= 0, cc < g[rr].count,
+                  g[rr][cc] == "." else { continue }
+            g[rr][cc] = ch
+        }
+    }
+    return g.map { String($0) }
+}
+
+// compõe um quadro: props de trás -> cena -> props da frente
 func compose(scene: Scene, props: [Prop], frame: Int) -> [String] {
     guard !scene.frames.isEmpty else { return [] }
     let i = frame % scene.frames.count
@@ -56,7 +74,9 @@ func compose(scene: Scene, props: [Prop], frame: Int) -> [String] {
               propGrid.allSatisfy({ $0.count <= slot.maxW })
         else { continue }
         let anchor = slot.pos[i % slot.pos.count]
-        grid = stamp(propGrid, onto: grid, x: anchor.x, y: anchor.y)
+        grid = slot.behind
+            ? stampBehind(propGrid, onto: grid, x: anchor.x, y: anchor.y)
+            : stamp(propGrid, onto: grid, x: anchor.x, y: anchor.y)
     }
     return grid
 }
@@ -69,32 +89,32 @@ func compose(scene: Scene, props: [Prop], frame: Int) -> [String] {
 let sceneIdle = Scene(
     name: "idle",
     frames: [
-        emptyFx + clawsUp,
-        emptyFx + clawsDown,
-        emptyFx + clawsUp,
-        emptyFx + blinking(clawsDown),
+        emptyFx + idleV2a,
+        emptyFx + idleV2b,
+        emptyFx + idleV2a,
+        emptyFx + blinking(idleV2a),
     ],
     slots: [
-        "cabeca": SceneSlot(pos: [(2, 1), (2, 1), (2, 1), (2, 1)], maxW: 10, maxH: 2)
+        "cabeca": SceneSlot(pos: [(2, 5), (2, 5), (2, 5), (2, 5)], maxW: 10, maxH: 2)
     ])
 
-// debruçado no laptop — o laptop agora é um PROP no slot "mesa"
+// debruçado (v2): talos olhando a tela, bracinhos clicando nas teclas —
+// o laptop é um PROP no slot "mesa", desenhado ATRÁS das mãos
 let sceneDebrucado = Scene(
     name: "debrucado",
     frames: [
-        // corpo digitando (tecla voando faz parte da cena; a mesa fica vazia)
         [
             "..............",
             "...Y..........",
             "..............",
-            "..RRRRRRRRRR..",
-            ".RRWBRRRRWBRR.",
-            ".RRRRRRRRRRRR.",
-            ".RDRRRRRRRRDR.",
-            "..RRRRRRRRRR..",
-            "...........RR.",
-            ".RR........RR.",
             "..............",
+            "..............",
+            "..WB......WB..",
+            "..WB......WB..",
+            "..RRRRRRRRRR..",
+            "RRRRRRRRRRRRRR",
+            ".RRr......rRR.",
+            "..R...........",
             "..............",
             "..............",
             "..............",
@@ -103,60 +123,72 @@ let sceneDebrucado = Scene(
             "..............",
             "..........Y...",
             "..............",
-            "..RRRRRRRRRR..",
-            ".RRWBRRRRWBRR.",
-            ".RRRRRRRRRRRR.",
-            ".RDRRRRRRRRDR.",
-            "..RRRRRRRRRR..",
-            ".RR...........",
-            ".RR........RR.",
             "..............",
+            "..............",
+            "..WB......WB..",
+            "..WB......WB..",
+            "..RRRRRRRRRR..",
+            "RRRRRRRRRRRRRR",
+            ".RRr......rRR.",
+            "...........R..",
             "..............",
             "..............",
             "..............",
         ],
     ],
     slots: [
-        "mesa": SceneSlot(pos: [(2, 10), (2, 10)], maxW: 10, maxH: 3),
-        "cabeca": SceneSlot(pos: [(2, 2), (2, 2)], maxW: 10, maxH: 2),
+        "mesa": SceneSlot(pos: [(2, 10), (2, 10)], maxW: 10, maxH: 3, behind: true),
+        "cabeca": SceneSlot(pos: [(2, 5), (2, 5)], maxW: 10, maxH: 2),
     ])
 
-// comemorando: pulinhos — brilhos/confete são props no slot "ceu"
+// comemorando: pinças pro alto + pulinho — brilhos/confete no slot "ceu"
 let sceneComemorando = Scene(
     name: "comemorando",
     frames: [
-        emptyFx + clawsUp,
-        jumping(emptyFx, clawsUp),
+        emptyFx + celebV2a,
+        emptyFx + celebV2b,
     ],
     slots: [
-        // 3 linhas: no quadro do pulo o corpo sobe e ocupa a 4ª linha do céu
         "ceu": SceneSlot(pos: [(0, 0), (0, 0)], maxW: 14, maxH: 3),
-        "cabeca": SceneSlot(pos: [(2, 3), (2, 2)], maxW: 10, maxH: 2),
+        "cabeca": SceneSlot(pos: [(2, 6), (2, 6)], maxW: 10, maxH: 2),
     ])
 
 // deitado dormindo — o "Zzz" é um prop no slot "acima"
 let sceneDeitado = Scene(
     name: "deitado",
     frames: [
-        emptyFx + blinking(clawsDown),
-        emptyFx + blinking(clawsDown),
+        emptyFx + blinking(deitadoV2),
+        emptyFx + blinking(deitadoV2),
     ],
     slots: [
         "acima": SceneSlot(pos: [(0, 0), (0, 0)], maxW: 14, maxH: 4),
-        "cabeca": SceneSlot(pos: [(2, 3), (2, 3)], maxW: 10, maxH: 2),
+        "cabeca": SceneSlot(pos: [(2, 9), (2, 9)], maxW: 10, maxH: 2),
     ])
 
-// atenção: acenando — cara única global, sem slots de addon
+// atenção: acenando com a mão — cara única global, sem slots de addon
 let sceneAtencao = Scene(
     name: "atencao",
     frames: [
-        exclaimFx + clawsUp,
-        emptyFx + rightUpLeftDown,
-        exclaimFx + clawsUp,
-        emptyFx + leftUpRightDown,
+        exclaimFx + waveV2,
+        emptyFx + idleV2a,
+        exclaimFx + waveV2,
+        emptyFx + idleV2a,
     ],
     slots: [
-        "cabeca": SceneSlot(pos: [(2, 3), (2, 3), (2, 3), (2, 3)], maxW: 10, maxH: 2)
+        "cabeca": SceneSlot(pos: [(2, 5), (2, 5), (2, 5), (2, 5)], maxW: 10, maxH: 2)
+    ])
+
+// de pé, atento: a cena dos ADDONS — mão erguida (slot garra) + chão à frente
+let sceneAtento = Scene(
+    name: "atento",
+    frames: [
+        emptyFx + waveV2,
+        emptyFx + idleV2b,
+    ],
+    slots: [
+        "garra": SceneSlot(pos: [(11, 2), (11, 3)], maxW: 3, maxH: 3),
+        "chao": SceneSlot(pos: [(4, 11), (4, 11)], maxW: 6, maxH: 3),
+        "cabeca": SceneSlot(pos: [(2, 5), (2, 5)], maxW: 10, maxH: 2),
     ])
 
 // ---------------------------------------------------------------------------
@@ -180,6 +212,24 @@ let propBrilhos = Prop(
 let propConfete = Prop(
     name: "confete", slot: "ceu",
     frames: [Array(confettiFx1.prefix(3)), Array(confettiFx2.prefix(3))])
+
+// lupa na garra erguida (prop default de vigília dos addons)
+let propLupa = Prop(
+    name: "lupa", slot: "garra",
+    frames: [[
+        "CC.",
+        "CCG",
+        "..G",
+    ]])
+
+// caixote/container no chão (vigia de coisas vivas)
+let propCaixote = Prop(
+    name: "caixote", slot: "chao",
+    frames: [[
+        "GGGG",
+        "GLLG",
+        "GGGG",
+    ]])
 
 // ---------------------------------------------------------------------------
 // Mapeamento estado -> cena + props (a arte final de cada estado)

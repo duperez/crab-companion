@@ -45,8 +45,10 @@ for state in PetState.allCases {
 }
 
 let working0 = compose(scene: sceneDebrucado, props: [propLaptop], frame: 0)
-check(working0[10].contains("GGGGGGGGGG"), "prop laptop carimbado no slot mesa")
-check(compose(scene: sceneDebrucado, props: [], frame: 0)[10] == "..............",
+check(working0[11].contains("LLLLLLLL"), "prop laptop carimbado no slot mesa")
+check(working0[10].hasPrefix("..R"), "mãozinha digitando fica NA FRENTE do laptop")
+check(working0[10].contains("GGG"), "laptop aparece atrás da mãozinha")
+check(!compose(scene: sceneDebrucado, props: [], frame: 0)[11].contains("L"),
       "cena debruçado sem prop tem a mesa vazia")
 
 // prop maior que o slot é ignorado sem quebrar a cena
