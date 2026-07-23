@@ -47,6 +47,9 @@ struct CrabyConfig: Codable {
     var soundTheme: String? // classic | soft | retro
     var soundPack: [String: String]? // override por evento (ver Sounds.swift)
     var hideOnScreenShare: Bool? // padrão: true
+    // ordem de preferência das fontes na cena de vigília: a PRIMEIRA fonte
+    // ativa desta lista veste o Craby sozinha (props nunca se misturam)
+    var sourcePriority: [String]? // padrão: ["ci", "docker"]
 }
 
 // filhote = um subagente em execução (hooks SubagentStart/SubagentStop)
@@ -1623,12 +1626,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         render()
     }
 
-    // vigília ativa: o idle vira a cena "atento" — lupa erguida (e caixote
-    // no chão se houver container/docker sendo vigiado)
+    // vigília ativa: o idle vira a cena "atento". Os props NUNCA se misturam:
+    // a fonte ativa de maior prioridade veste o Craby sozinha (figurino do
+    // addon vencedor); fontes sem prop próprio usam a lupa genérica.
     private var watchingFrames: [[String]] {
-        var props: [Prop] = [propLupa]
-        if watches.values.contains(where: { $0.alive && $0.source == "docker" }) {
-            props.append(propCaixote)
+        let active = Set(watches.values.filter { $0.alive }.map(\.source))
+        let order = config.sourcePriority ?? ["ci", "docker"]
+        let winner = order.first(where: { active.contains($0) })
+            ?? active.sorted().first
+        let props: [Prop]
+        switch winner {
+        case "docker": props = [propCaixote]
+        default: props = [propLupa] // ci e fontes sem figurino próprio
         }
         return (0..<sceneAtento.frames.count).map {
             compose(scene: sceneAtento, props: props, frame: $0)
@@ -1656,8 +1665,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // quadros de mania não entram no cache (são transitórios e variados)
         let watching = quirk.isEmpty && state == .idle
             && watches.values.contains(where: { $0.alive })
+        // o vencedor entra na chave do cache (figurinos diferentes por fonte)
+        let watchTag = watching
+            ? (watches.values.filter { $0.alive }.map(\.source).sorted().joined())
+            : "n"
         let key = quirk.isEmpty
-            ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)-\(lookingLeft ? 1 : 0)-\(watching ? 1 : 0)"
+            ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)-\(lookingLeft ? 1 : 0)-\(watchTag)"
             : nil
         statusItem.button?.image = barImage(for: grid, key: key)
     }
