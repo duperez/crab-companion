@@ -58,12 +58,12 @@ let sparkleFx2 = [
 // arte v2 (F2, corpo esbelto como o do done): talos, boquinha,
 // garras-mão laterais, perninhas curtas
 let idleV2a = [
-    "..WB......WB..",
-    "..WB......WB..",
+    "...WB....WB...",
+    "...WB....WB...",
     "...RRRRRRRR...",
     "..RRRRRRRRRR..",
     ".RRRRRrrRRRRR.",
-    ".RrRRRRRRRRrR.",
+    "..rRRRRRRRRr..",
     "..R..R..R..R..",
     "..r..r..r..r..",
     "..............",
@@ -73,11 +73,11 @@ let idleV2a = [
 // bob: talos abaixam e perninhas dão um passinho
 let idleV2b = [
     "..............",
-    "..WB......WB..",
+    "...WB....WB...",
     "...RRRRRRRR...",
     "..RRRRRRRRRR..",
     ".RRRRRrrRRRRR.",
-    ".RrRRRRRRRRrR.",
+    "..rRRRRRRRRr..",
     "...R..R..R..R.",
     "...r..r..r..r.",
     "..............",
@@ -86,12 +86,12 @@ let idleV2b = [
 
 // acenando/segurando: mão direita erguida ao lado do talo
 let waveV2 = [
-    "..WB......WB..",
-    "..WB......WBR.",
+    "...WB....WB..R",
+    "...WB....WB.RR",
     "...RRRRRRRR.R.",
     "..RRRRRRRRRR..",
     ".RRRRRrrRRRRR.",
-    ".RrRRRRRRRRr..",
+    "..rRRRRRRRRr..",
     "..R..R..R..R..",
     "..r..r..r..r..",
     "..............",
@@ -133,10 +133,10 @@ let deitadoV2 = [
     "..............",
     "..............",
     "..............",
-    "..WB......WB..",
+    "...WB....WB...",
     "..RRRRRRRRRR..",
     ".RRRRRrrRRRRR.",
-    ".RrRRRRRRRRrR.",
+    "..rRRRRRRRRr..",
     "..r..r..r..r..",
 ]
 
