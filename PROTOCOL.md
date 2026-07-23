@@ -92,13 +92,79 @@ empty responses and connection errors as "fall back to your normal flow".
 ```
 GET /status                       → JSON: version, displayed, totalTasks,
                                     subagents, sessions[], watches[]
+GET /scenes                       → JSON: scene catalog (first frame + slots
+                                    with anchor/max size) and the palette —
+                                    what the playground addon builder uses
 GET /answer/<answer>?token=<t>    → answer the current bubble (token required)
 GET /quit?token=<t>               → quit (token required)
 GET /subagent-start|subagent-stop?session=<id>[&failed=1]
 ```
 
 Token: `~/Library/Application Support/Craby/token` (created on first launch,
-mode 0600). Only decision-injecting endpoints require it.
+mode 0600). Only decision-injecting endpoints require it. Addons never
+receive the token.
+
+## Addons
+
+An addon is the packaged form of a brain: a folder Craby supervises, so the
+watcher process needs no launchd/cron of its own.
+
+### Folders
+
+- `~/Library/Application Support/Craby/addons/<name>/` — where all addons
+  live. Menu bar → 🧩 Addons → "open folder" gets you there.
+- The addons bundled with the app (`github-watch`, `live-watch`) are
+  **seeds**: on first run they are copied into the user folder as editable
+  examples. Craby never reads them from the bundle afterwards — the user's
+  copy is the truth.
+
+### Manifest (`addon.json`)
+
+```json
+{
+  "name": "github-watch",
+  "description": "GitHub CI on the pet (gh)",
+  "exec": "run.sh",
+  "source": "ci",
+  "interval": 30,
+  "scene": "atento",
+  "props": { "garra": ["CW.", "CCG", "..G"] },
+  "cores": { "C": "#4078c0" }
+}
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `name` | yes | unique addon id (also the default `source`) |
+| `exec` | yes | executable inside the addon folder, run each cycle |
+| `description` | no | shown in the 🧩 Addons menu |
+| `source` | no | source slug used in events and in `sourcePriority` (default: `name`) |
+| `interval` | no | seconds between runs (default 30, minimum 5) |
+| `scene` | no | scene from the catalog the pet performs while this source is on top: `idle`, `atento` (default), `debrucado`, `comemorando`, `deitado` |
+| `props` | no | the costume: `{ "<slot>": ["row", "row", …] }` grids stamped into the scene's slots (`.` = transparent) |
+| `cores` | no | extra palette entries, `{ "<char>": "#rrggbb" }` |
+
+Scenes belong to the app; addons only pick one and dress it. Slots and their
+sizes come from `GET /scenes`. The active source with the highest priority
+wears its scene+props exclusively — props from different sources never mix.
+
+### Supervisor behavior
+
+- Each enabled addon's `exec` runs every `interval` seconds (first run
+  immediately when toggled on). One run = one round of checking: poll the
+  real thing, report via `/event` and `/watch`, exit.
+- Watchdog: a run still alive after 60 s is terminated.
+- Environment: the process gets `CRABY_PORT` (4923) and `CRABY_SOURCE` (the
+  resolved source slug) on top of the user environment. It never gets the
+  secret token — addons can inform and ask, not decide.
+- Enable/disable per addon in the menu bar (🧩 Addons); disabled addons are
+  simply not scheduled.
+
+### Building one without hand-writing grids
+
+The playground at `http://localhost:4923` includes a visual builder: pick a
+scene, paint props cell by cell in each slot, and copy the generated
+`addon.json` into a new folder next to the seeds.
 
 ## Rules for well-behaved brains
 

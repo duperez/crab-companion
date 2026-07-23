@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Craby — Crab Companion</title>
-<meta name="description" content="Craby, a pixel-art desktop crab for macOS that shows what Claude Code is doing — and lets you answer it from a speech bubble.">
+<meta name="description" content="Craby, a pixel-art desktop crab for macOS that watches your development workflow — a presence interface any local brain can use as its face. Claude Code is the flagship integration.">
 <link rel="icon" href="icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -51,7 +51,7 @@
   <canvas id="brood" width="23" height="6" style="width:184px;height:48px"></canvas>
   <p class="ts">his brood — one baby per running subagent</p>
   <h1 class="px">CRABY</h1>
-  <p class="tagline">A tiny pixel-art crab that lives on top of your Mac screen and tells you what Claude Code is up to — and lets you answer back without touching the terminal.</p>
+  <p class="tagline">A tiny pixel-art crab that watches your development workflow — a presence interface any local brain can use as its face. Claude Code is the flagship integration: see what it's up to and answer back without touching the terminal.</p>
   <div class="states" id="states">
     <button data-s="idle">😴 idle</button>
     <button data-s="working" class="on">💻 working</button>
@@ -79,16 +79,19 @@ cd crab-companion
   <h2 class="px">What Craby does</h2>
   <div class="grid">
     <div class="card"><h3>🖥️ Always in the corner of your eye</h3><p>Floats above every app and every Space — even fullscreen. Never steals focus, no Dock icon.</p></div>
-    <div class="card"><h3>💬 Answer permissions from a bubble</h3><p>When Claude asks for permission, click Allow / Deny right under Craby. Dangerous commands get a red border. No answer? Falls back to the terminal — Craby never decides alone.</p></div>
+    <div class="card"><h3>💬 Answer permissions from a bubble</h3><p>When Claude asks for permission, click Allow / Always allow / Deny right under Craby. Dangerous commands get a red border. No answer? Falls back to the terminal — Craby never decides alone.</p></div>
     <div class="card"><h3>❓ Questions too</h3><p>Multiple-choice and free-text questions through the bubble, via a simple local HTTP API any script can use.</p></div>
     <div class="card"><h3>🗂️ Multi-session scoreboard</h3><p>Several sessions at once? Craby shows the highest-priority state, dots for parallel work, and a tooltip per project. Click to jump to the session that needs you.</p></div>
     <div class="card"><h3>🐣 A brood of subagents</h3><p>Spawn subagents and watch baby crabs hatch from eggs below Craby — they scuttle while the subagent runs, retire with a tiny cane and vanish in a star poof (gray poof if it failed). No other coding pet does this.</p></div>
     <div class="card"><h3>📍 Menu bar twin</h3><p>A mini animated Craby in the menu bar, always in sync. Collapse the floating one when you need a clean screen.</p></div>
     <div class="card"><h3>🔔 Subtle sounds</h3><p>A soft pling when work finishes, a ping when Claude needs you. Toggle anytime from the menu bar.</p></div>
-    <div class="card"><h3>📊 Daily stats &amp; levels</h3><p>Tasks finished, projects, time worked, recent events — and Craby levels up from hatchling to legend as work piles up.</p></div>
+    <div class="card"><h3>🧩 Addons</h3><p>Drop a folder with an addon.json and an executable and Craby learns new tricks. github-watch and live-watch ship out of the box — or build your own in the visual builder at the playground (localhost:4923).</p></div>
+    <div class="card"><h3>🔍 Keeping watch</h3><p>Put Craby on vigil with /watch: he raises a little magnifying glass while observing, and sits next to a crate when he's watching Docker containers.</p></div>
+    <div class="card"><h3>📜 Open protocol</h3><p>Everything runs over a documented local HTTP protocol (PROTOCOL.md). Any script, tool or local brain can drive Craby — Claude Code is just the first face-wearer.</p></div>
+    <div class="card"><h3>📊 Daily stats &amp; plan usage</h3><p>Tasks finished, projects, time worked, recent events — plus how much of your Claude plan you've used today.</p></div>
     <div class="card"><h3>📱 Phone alerts when away</h3><p>Optional ntfy integration: if you're not at the Mac and Claude needs you, your phone gets a ping.</p></div>
     <div class="card"><h3>🎨 Custom sprite packs</h3><p>Sprites are text grids. Drop a sprites.json to reskin Craby entirely — cat, octopus, you name it.</p></div>
-    <div class="card"><h3>💤 He's alive</h3><p>Idle quirks, a sweat drop on long tasks, naps when nothing happens, and confetti when he levels up.</p></div>
+    <div class="card"><h3>💤 He's alive</h3><p>Idle quirks, a sweat drop on long tasks, naps when nothing happens — and a confetti party every time you git push.</p></div>
   </div>
 </section>
 
@@ -100,7 +103,10 @@ Claude Code ── <b>hooks</b> ──&gt; localhost:4923 ──&gt; 🦀 Craby 
      └────────── decision (<b>long-poll HTTP</b>) ──────┘
 
 UserPromptSubmit → typing on the laptop     Stop → celebration
-Notification → waving for attention         PermissionRequest → bubble, waits for your click</pre>
+Notification → waving for attention         PermissionRequest → bubble, waits for your click
+
+The same open HTTP protocol (<b>PROTOCOL.md</b>) works for any brain, not just Claude Code —
+and addons (a folder + addon.json + an executable) plug extra behaviors into Craby.</pre>
   </div>
 </section>
 
@@ -109,25 +115,27 @@ Notification → waving for attention         PermissionRequest → bubble, wait
 </footer>
 
 <script>
+// arte v3: quadros vindos de Sources/Sprites.swift + Scenes.swift do app
 const emptyFx=["..............","..............","..............",".............."];
 const exclaimFx=["......YY......","......YY......","..............","......YY......"];
 const sparkleFx1=["..Y.......Y...","..............","......Y.......",".............."];
-const sparkleFx2=["..............","....Y....Y....","..............",".Y..........Y."];
-const clawsUp=[".RR........RR.",".RR........RR.","..R........R..","..RRRRRRRRRR..",".RRWBRRRRWBRR.",".RRRRRRRRRRRR.",".RDRRRRRRRRDR.","..RRRRRRRRRR..",".R.R..RR..R.R.","R..R..RR..R..R"];
-const clawsDown=["..............","RRR........RRR",".R..........R.","..RRRRRRRRRR..",".RRWBRRRRWBRR.",".RRRRRRRRRRRR.",".RDRRRRRRRRDR.","..RRRRRRRRRR..","R..R..RR..R..R",".R.R..RR..R.R."];
-const leftUpRightDown=[".RR...........",".RR........RRR","..R........R..","..RRRRRRRRRR..",".RRWBRRRRWBRR.",".RRRRRRRRRRRR.",".RDRRRRRRRRDR.","..RRRRRRRRRR..",".R.R..RR..R.R.","R..R..RR..R..R"];
-const rightUpLeftDown=["...........RR.","RRR........RR.",".R.........R..","..RRRRRRRRRR..",".RRWBRRRRWBRR.",".RRRRRRRRRRRR.",".RDRRRRRRRRDR.","..RRRRRRRRRR..","R..R..RR..R..R",".R.R..RR..R.R."];
-const laptopLeft=["..............","...Y..........","..............","..RRRRRRRRRR..",".RRWBRRRRWBRR.",".RRRRRRRRRRRR.",".RDRRRRRRRRDR.","..RRRRRRRRRR..","...........RR.",".RR........RR.","..GGGGGGGGGG..","..GLLLLLLLLG..","..GGGGGGGGGG..",".............."];
-const laptopRight=["..............","..........Y...","..............","..RRRRRRRRRR..",".RRWBRRRRWBRR.",".RRRRRRRRRRRR.",".RDRRRRRRRRDR.","..RRRRRRRRRR..",".RR...........",".RR........RR.","..GGGGGGGGGG..","..GLLLLLLLLG..","..GGGGGGGGGG..",".............."];
+const sparkleFx2=["..............","....Y....Y....","..............",".............."];
+const idleV2a=["...WB....WB...","...WB....WB...","...RRRRRRRR...","..RRRRRRRRRR..",".RRRRRrrRRRRR.","..rRRRRRRRRr..","..R..R..R..R..","..r..r..r..r..","..............",".............."];
+const idleV2b=["..............","...WB....WB...","...RRRRRRRR...","..RRRRRRRRRR..",".RRRRRrrRRRRR.","..rRRRRRRRRr..","...R..R..R..R.","...r..r..r..r.","..............",".............."];
+const waveV2=["...WB....WB..R","...WB....WB.RR","...RRRRRRRR.R.","..RRRRRRRRRR..",".RRRRRrrRRRRR.","..rRRRRRRRRr..","..R..R..R..R..","..r..r..r..r..","..............",".............."];
+const celebV2a=["R..WB....WB..R","RR.WB....WB.RR",".R.RRRRRRRR.R.","..RRRRRRRRRR..",".RRRRRrrRRRRR.","..rRRRRRRRRr..","..R..R..R..R..","..r..r..r..r..","..............",".............."];
+const celebV2b=[".R.WB....WB.R.","RR.WB....WB.RR",".R.RRRRRRRR.R.","..RRRRRRRRRR..",".RRRRRrrRRRRR.","..rRRRRRRRRr..","...R..RR..R...","..............","..............",".............."];
+// debruçado no laptop (cena + prop laptop atrás das mãos, já composto)
+const debrucadoA=["..............","...Y..........","..............","..............","..............","..WB......WB..","..WB......WB..","...RRRRRRRR...","..RRRRRRRRRR..",".RRr......rRR.","..RGGGGGGGGG..","..GLLLLLLLLG..","..GGGGGGGGGG..",".............."];
+const debrucadoB=["..............","..........Y...","..............","..............","..............","..WB......WB..","..WB......WB..","...RRRRRRRR...","..RRRRRRRRRR..",".RRr......rRR.","..GGGGGGGGGR..","..GLLLLLLLLG..","..GGGGGGGGGG..",".............."];
 const blink=g=>g.map(r=>r.replaceAll("WB","DD"));
-const jump=(fx,crab)=>[...fx.slice(0,3),...crab,".".repeat(14)];
 const STATES={
-  idle:{frames:[[...emptyFx,...clawsUp],[...emptyFx,...clawsDown],[...emptyFx,...clawsUp],[...emptyFx,...blink(clawsDown)]],ms:800},
-  working:{frames:[laptopLeft,laptopRight],ms:200},
-  done:{frames:[[...sparkleFx1,...clawsUp],jump(sparkleFx2,clawsUp)],ms:400},
-  attention:{frames:[[...exclaimFx,...clawsUp],[...emptyFx,...rightUpLeftDown],[...exclaimFx,...clawsUp],[...emptyFx,...leftUpRightDown]],ms:350},
+  idle:{frames:[[...emptyFx,...idleV2a],[...emptyFx,...idleV2b],[...emptyFx,...idleV2a],[...emptyFx,...blink(idleV2a)]],ms:800},
+  working:{frames:[debrucadoA,debrucadoB],ms:200},
+  done:{frames:[[...sparkleFx1,...celebV2a],[...sparkleFx2,...celebV2b]],ms:400},
+  attention:{frames:[[...exclaimFx,...waveV2],[...emptyFx,...idleV2a],[...exclaimFx,...waveV2],[...emptyFx,...idleV2a]],ms:350},
 };
-const PAL={R:"#e8593d",D:"#b83824",W:"#ffffff",B:"#1a1a1a",Y:"#ffd126",G:"#596373",L:"#99a6b5"};
+const PAL={R:"#e8593d",D:"#b83824",r:"#ad3626",W:"#ffffff",B:"#1a1a1a",Y:"#ffd126",G:"#596373",L:"#99a6b5",C:"#4fc2f7"};
 const ctx=document.getElementById("crab").getContext("2d");
 let cur="working",idx=0,timer=null;
 function draw(){
