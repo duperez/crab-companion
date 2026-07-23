@@ -184,7 +184,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard let self, self.floatingVisible, !self.hiddenForSharing,
                   self.quirk.isEmpty else { return }
             self.play(.hatch)
-            self.startQuirk([emptyFx + cloudDense, emptyFx + cloudSparse])
+            self.startFastQuirk(
+                [emptyFx + cloudDense, emptyFx + cloudSparse], interval: 0.15)
         }
         applyState(.idle)
 
@@ -1311,6 +1312,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // ------------------------------------------------------------------
     // Personalidade: manias do ócio e comemoração de level-up
     // ------------------------------------------------------------------
+
+    // quirk em ritmo próprio (ex.: nuvem de chegada, que não pode atrasar
+    // o trabalho): timer dedicado, e ao terminar devolve o compasso do estado
+    func startFastQuirk(_ frames: [[String]], interval: TimeInterval) {
+        quirk = frames
+        quirkIndex = 0
+        animTimer?.invalidate()
+        animTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) {
+            [weak self] _ in
+            guard let self else { return }
+            self.quirkIndex += 1
+            if self.quirkIndex >= self.quirk.count {
+                self.quirk = []
+                self.quirkIndex = 0
+                self.applyState(self.state) // restaura o timer normal
+                return
+            }
+            self.render()
+        }
+        render()
+    }
 
     func startQuirk(_ frames: [[String]]) {
         quirk = frames
