@@ -90,11 +90,10 @@ enum L {
         }
     }
 
-    static var levelUp: String { tr("leveled up!", "subiu de nível!", "¡subió de nivel!") }
-    static func streak(_ days: Int) -> String {
-        tr("🔥 \(days)-day streak", "🔥 \(days) dias seguidos", "🔥 \(days) días seguidos")
-    }
     static var about: String { tr("About Craby", "Sobre o Craby", "Acerca de Craby") }
+    static var openAddonsFolder: String {
+        tr("Open addons folder…", "Abrir pasta de addons…", "Abrir carpeta de addons…")
+    }
     static func updateAvailable(_ v: String) -> String {
         tr("Update available: v\(v)", "Atualização disponível: v\(v)",
            "Actualización disponible: v\(v)")
@@ -134,19 +133,19 @@ enum L {
                   "Hoy: \(tasks) tareas · \(projects) proyectos · \(dur)")
     }
 
-    static let levelNames: [String] = {
-        switch lang {
-        case .en: return ["hatchling", "apprentice", "worker", "veteran", "master", "legend"]
-        case .pt: return ["filhote", "aprendiz", "operário", "veterano", "mestre", "lenda"]
-        case .es: return ["cría", "aprendiz", "obrero", "veterano", "maestro", "leyenda"]
-        }
-    }()
-
-    static func levelLine(level: Int, name: String, total: Int) -> String {
-        tr("Craby — level \(level) (\(name)) · \(total) tasks all-time",
-           "Craby — nível \(level) (\(name)) · \(total) tarefas no total",
-           "Craby — nivel \(level) (\(name)) · \(total) tareas en total")
+    static func totalLine(_ total: Int) -> String {
+        tr("Craby · \(total) tasks all-time",
+           "Craby · \(total) tarefas no total",
+           "Craby · \(total) tareas en total")
     }
+
+    // vigília (watch): itens vivos que o Craby está de olho
+    static var watching: String { tr("Watching", "Observando", "Observando") }
+    static func watchDown(_ label: String) -> String {
+        tr("🔴 \(label) went down!", "🔴 \(label) caiu!", "🔴 ¡\(label) se cayó!")
+    }
+    static var alive: String { tr("alive", "vivo", "vivo") }
+    static var down: String { tr("down", "caiu", "caído") }
 
     // Preferências
     static var preferences: String { tr("Preferences…", "Preferências…", "Preferencias…") }

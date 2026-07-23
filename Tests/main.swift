@@ -36,18 +36,46 @@ check(eyesLooking(left: true, [".RRWBRRRRWBRR."]) == [".RRBWRRRRBWRR."],
 check(eyesLooking(left: false, [".RRWBRRRRWBRR."]) == [".RRWBRRRRWBRR."],
       "olhos: direita mantém a arte original")
 
-for level in [1, 3, 5, 6, 99] {
-    for state in PetState.allCases {
-        for (i, frame) in state.frames.enumerated() {
-            check(isValidFrame(overlayAccessory(frame, level: level)),
-                  "acessório nível \(level): \(state.rawValue) quadro \(i) continua 14x14")
-        }
+// --- motor de cenas + props + slots ---
+
+for state in PetState.allCases {
+    for (i, frame) in state.frames.enumerated() {
+        check(isValidFrame(frame), "cena \(state.rawValue): quadro \(i) é 14x14 válido")
     }
 }
-check(overlayAccessory(emptyFx + clawsUp, level: 1) == emptyFx + clawsUp,
-      "acessório: nível baixo não altera a arte")
-check(overlayAccessory(emptyFx + clawsUp, level: 6) != emptyFx + clawsUp,
-      "acessório: coroa altera a arte")
+
+let working0 = compose(scene: sceneDebrucado, props: [propLaptop], frame: 0)
+check(working0[11].contains("LLLLLLLL"), "prop laptop carimbado no slot mesa")
+check(working0[10].hasPrefix("..R"), "mãozinha digitando fica NA FRENTE do laptop")
+check(working0[10].contains("GGG"), "laptop aparece atrás da mãozinha")
+check(!compose(scene: sceneDebrucado, props: [], frame: 0)[11].contains("L"),
+      "cena debruçado sem prop tem a mesa vazia")
+
+// prop maior que o slot é ignorado sem quebrar a cena
+let gigante = Prop(name: "g", slot: "ceu", frames: [Array(repeating: "YYYY", count: 9)])
+check(compose(scene: sceneComemorando, props: [gigante], frame: 0)
+      == compose(scene: sceneComemorando, props: [], frame: 0),
+      "prop grande demais é ignorado")
+
+// prop em slot inexistente na cena é ignorado
+let semSlot = Prop(name: "x", slot: "inexistente", frames: [["Y"]])
+check(compose(scene: sceneIdle, props: [semSlot], frame: 0)
+      == compose(scene: sceneIdle, props: [], frame: 0),
+      "prop de slot inexistente é ignorado")
+
+// carimbo fora dos limites não estoura
+check(stamp(["YY", "YY"], onto: emptyFx, x: 13, y: 3).count == emptyFx.count,
+      "stamp na borda não quebra a grade")
+
+// âncora por quadro: prop translada junto com o corpo
+let cenaTeste = Scene(
+    name: "t", frames: [emptyFx + clawsUp, emptyFx + clawsUp],
+    slots: ["s": SceneSlot(pos: [(0, 0), (2, 0)], maxW: 3, maxH: 1)])
+let pontinho = Prop(name: "p", slot: "s", frames: [["Y"]])
+check(compose(scene: cenaTeste, props: [pontinho], frame: 0)[0].hasPrefix("Y"),
+      "âncora do quadro 0")
+check(compose(scene: cenaTeste, props: [pontinho], frame: 1)[0].hasPrefix("..Y"),
+      "âncora do quadro 1 (prop transladou)")
 
 // --- filhotes (ninhada de subagentes) ---
 

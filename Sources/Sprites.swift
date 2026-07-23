@@ -6,7 +6,7 @@ import AppKit
 
 let gridCols = 14
 let gridRows = 14 // 4 de efeitos + 10 de caranguejo
-let pixelSize: CGFloat = 5
+let pixelSize: CGFloat = 6
 let barPixelSize: CGFloat = 1.3 // pixel do ícone da menu bar (~18pt no total)
 let bubbleWidth: CGFloat = 280
 let bubbleHeight: CGFloat = 104
@@ -18,7 +18,7 @@ let babyPixel: CGFloat = 3
 let maxVisibleBabies = 5
 let petAreaHeight: CGFloat = CGFloat(gridRows) * pixelSize // 70
 let petWindowWidth: CGFloat = 124 // 5 filhotes de 21px + espaçamentos
-let petWindowHeight: CGFloat = 94
+let petWindowHeight: CGFloat = petAreaHeight + 24
 let crabOffsetX: CGFloat = (petWindowWidth - CGFloat(gridCols) * pixelSize) / 2
 
 // ---------------------------------------------------------------------------
@@ -53,6 +53,91 @@ let sparkleFx2 = [
     "....Y....Y....",
     "..............",
     ".Y..........Y.",
+]
+
+// arte v2 (F2, corpo esbelto como o do done): talos, boquinha,
+// garras-mão laterais, perninhas curtas
+let idleV2a = [
+    "...WB....WB...",
+    "...WB....WB...",
+    "...RRRRRRRR...",
+    "..RRRRRRRRRR..",
+    ".RRRRRrrRRRRR.",
+    "..rRRRRRRRRr..",
+    "..R..R..R..R..",
+    "..r..r..r..r..",
+    "..............",
+    "..............",
+]
+
+// bob: talos abaixam e perninhas dão um passinho
+let idleV2b = [
+    "..............",
+    "...WB....WB...",
+    "...RRRRRRRR...",
+    "..RRRRRRRRRR..",
+    ".RRRRRrrRRRRR.",
+    "..rRRRRRRRRr..",
+    "...R..R..R..R.",
+    "...r..r..r..r.",
+    "..............",
+    "..............",
+]
+
+// acenando/segurando: mão direita erguida ao lado do talo
+let waveV2 = [
+    "...WB....WB..R",
+    "...WB....WB.RR",
+    "...RRRRRRRR.R.",
+    "..RRRRRRRRRR..",
+    ".RRRRRrrRRRRR.",
+    "..rRRRRRRRRr..",
+    "..R..R..R..R..",
+    "..r..r..r..r..",
+    "..............",
+    "..............",
+]
+
+// comemorando: pinças abertas pro alto (o gesto reservado!)
+let celebV2a = [
+    "R..WB....WB..R",
+    "RR.WB....WB.RR",
+    ".R.RRRRRRRR.R.",
+    "..RRRRRRRRRR..",
+    ".RRRRRrrRRRRR.",
+    "..rRRRRRRRRr..",
+    "..R..R..R..R..",
+    "..r..r..r..r..",
+    "..............",
+    "..............",
+]
+
+// pulinho: dedinhos fecham e perninhas recolhem
+let celebV2b = [
+    ".R.WB....WB.R.",
+    "RR.WB....WB.RR",
+    ".R.RRRRRRRR.R.",
+    "..RRRRRRRRRR..",
+    ".RRRRRrrRRRRR.",
+    "..rRRRRRRRRr..",
+    "...R..RR..R...",
+    "..............",
+    "..............",
+    "..............",
+]
+
+// deitado dormindo: talos baixos, corpo largado no chão
+let deitadoV2 = [
+    "..............",
+    "..............",
+    "..............",
+    "..............",
+    "..............",
+    "...WB....WB...",
+    "..RRRRRRRRRR..",
+    ".RRRRRrrRRRRR.",
+    "..rRRRRRRRRr..",
+    "..r..r..r..r..",
 ]
 
 let clawsUp = [
@@ -105,41 +190,6 @@ let rightUpLeftDown = [
     "..RRRRRRRRRR..",
     "R..R..RR..R..R",
     ".R.R..RR..R.R.",
-]
-
-// trabalhando: debruçado no laptop, garras alternando no teclado, teclas voando
-let laptopLeft = [
-    "..............",
-    "...Y..........",
-    "..............",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    "...........RR.",
-    ".RR........RR.",
-    "..GGGGGGGGGG..",
-    "..GLLLLLLLLG..",
-    "..GGGGGGGGGG..",
-    "..............",
-]
-
-let laptopRight = [
-    "..............",
-    "..........Y...",
-    "..............",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    ".RR...........",
-    ".RR........RR.",
-    "..GGGGGGGGGG..",
-    "..GLLLLLLLLG..",
-    "..GGGGGGGGGG..",
-    "..............",
 ]
 
 // dormindo: "Zzz" flutuando (dois quadros, o Z sobe)
@@ -292,37 +342,6 @@ func eyesLooking(left: Bool, _ grid: [String]) -> [String] {
     return grid.map { $0.replacingOccurrences(of: "WB", with: "BW") }
 }
 
-// acessórios de nível: o Craby exibe sua patente na cabeça
-// (3-4: capacete de obra; 5: chapéu de mestre; 6+: coroa de lenda)
-func overlayAccessory(_ grid: [String], level: Int) -> [String] {
-    guard level >= 3 else { return grid }
-    guard let headIdx = grid.firstIndex(where: { $0.contains("RRRRRRRRRR") }),
-          headIdx >= 1,
-          let firstR = grid[headIdx].firstIndex(of: "R")
-    else { return grid }
-    let s = grid[headIdx].distance(from: grid[headIdx].startIndex, to: firstR)
-    var g = grid
-
-    func paint(_ rowIdx: Int, _ cols: [Int], _ ch: Character) {
-        guard rowIdx >= 0, rowIdx < g.count else { return }
-        var chars = Array(g[rowIdx])
-        for c in cols where c >= 0 && c < chars.count { chars[c] = ch }
-        g[rowIdx] = String(chars)
-    }
-
-    switch level {
-    case 3, 4:
-        paint(headIdx - 1, Array((s + 1)...(s + 8)), "Y")
-    case 5:
-        paint(headIdx - 1, Array(s...(s + 9)), "G")
-        paint(headIdx - 2, Array((s + 3)...(s + 6)), "G")
-    default:
-        paint(headIdx - 1, Array((s + 2)...(s + 7)), "Y")
-        paint(headIdx - 2, [s + 2, s + 4, s + 6], "Y")
-    }
-    return g
-}
-
 // pulo: desloca o caranguejo uma linha pra cima dentro da grade
 func jumping(_ fx: [String], _ crab: [String]) -> [String] {
     Array(fx.dropLast()) + crab + [String(repeating: ".", count: gridCols)]
@@ -337,6 +356,7 @@ let defaultPalette: [Character: NSColor] = [
     "G": NSColor(red: 0.35, green: 0.39, blue: 0.45, alpha: 1.0),
     "L": NSColor(red: 0.60, green: 0.65, blue: 0.71, alpha: 1.0),
     "C": NSColor(red: 0.31, green: 0.76, blue: 0.97, alpha: 1.0),
+    "r": NSColor(red: 0.68, green: 0.21, blue: 0.15, alpha: 1.0),  // sombra v2
 ]
 
 // ---------------------------------------------------------------------------
@@ -399,31 +419,10 @@ func paletteColor(_ ch: Character) -> NSColor? {
 enum PetState: String, CaseIterable {
     case idle, working, done, attention, sleeping
 
+    // a arte de cada estado agora nasce do motor de cenas+props (Scenes.swift)
     var frames: [[String]] {
         if let custom = customFrames[rawValue] { return custom }
-        switch self {
-        case .idle:
-            return [
-                emptyFx + clawsUp,
-                emptyFx + clawsDown,
-                emptyFx + clawsUp,
-                emptyFx + blinking(clawsDown),
-            ]
-        case .working:
-            return [laptopLeft, laptopRight]
-        case .done:
-            return [sparkleFx1 + clawsUp, jumping(sparkleFx2, clawsUp)]
-        case .attention:
-            return [
-                exclaimFx + clawsUp,
-                emptyFx + rightUpLeftDown,
-                exclaimFx + clawsUp,
-                emptyFx + leftUpRightDown,
-            ]
-        case .sleeping:
-            let asleep = blinking(clawsDown)
-            return [sleepFx1 + asleep, sleepFx2 + asleep]
-        }
+        return composedFrames(for: self)
     }
 
     var interval: TimeInterval {
@@ -450,32 +449,27 @@ enum PetState: String, CaseIterable {
 // manias espontâneas do ócio: sequências curtas de quadros tocadas uma vez
 let idleQuirks: [[[String]]] = [
     // aceninho
-    [emptyFx + rightUpLeftDown, emptyFx + clawsUp, emptyFx + rightUpLeftDown],
+    [emptyFx + waveV2, emptyFx + idleV2a, emptyFx + waveV2],
     // passinho de lado
     [
-        emptyFx + shifted(clawsDown, dx: 1),
-        emptyFx + shifted(clawsUp, dx: 1),
-        emptyFx + shifted(clawsDown, dx: -1),
-        emptyFx + shifted(clawsUp, dx: -1),
-        emptyFx + clawsDown,
+        emptyFx + shifted(idleV2b, dx: 1),
+        emptyFx + shifted(idleV2a, dx: 1),
+        emptyFx + shifted(idleV2b, dx: -1),
+        emptyFx + shifted(idleV2a, dx: -1),
+        emptyFx + idleV2a,
     ],
     // bolhinha subindo
     [
-        ["..............", "..............", "......C.......", ".............."] + clawsUp,
-        ["..............", "......C.......", "..............", ".............."] + clawsUp,
-        ["......C.......", "..............", "..............", ".............."] + clawsUp,
+        ["..............", "..............", "......C.......", ".............."] + idleV2a,
+        ["..............", "......C.......", "..............", ".............."] + idleV2a,
+        ["......C.......", "..............", "..............", ".............."] + idleV2a,
     ],
 ]
 
-// comemoração de level-up: confete + pulos
-let levelUpFrames: [[String]] = [
-    confettiFx1 + clawsUp,
-    jumping(confettiFx2, clawsUp),
-    confettiFx2 + clawsUp,
-    jumping(confettiFx1, clawsUp),
-    confettiFx1 + clawsUp,
-    jumping(confettiFx2, clawsUp),
-]
+// festa (/celebrate): cena comemorando + prop confete, 3 ciclos
+let levelUpFrames: [[String]] = (0..<6).map {
+    compose(scene: sceneComemorando, props: [propConfete], frame: $0)
+}
 
 func drawGrid(_ grid: [String], pixel: CGFloat, height: CGFloat) {
     for (row, line) in grid.enumerated() {

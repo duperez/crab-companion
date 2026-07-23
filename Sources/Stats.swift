@@ -49,31 +49,6 @@ final class StatsStore {
 
     var today: DayStats { data.days[dayKey()] ?? DayStats() }
 
-    // dias seguidos com pelo menos 1 tarefa (hoje ainda sem tarefa não quebra)
-    var streakDays: Int {
-        let cal = Calendar.current
-        var day = Date()
-        if (data.days[dayKey(day)]?.tasks ?? 0) == 0 {
-            guard let yesterday = cal.date(byAdding: .day, value: -1, to: day) else { return 0 }
-            day = yesterday
-        }
-        var streak = 0
-        while (data.days[dayKey(day)]?.tasks ?? 0) > 0 {
-            streak += 1
-            guard let prev = cal.date(byAdding: .day, value: -1, to: day) else { break }
-            day = prev
-        }
-        return streak
-    }
-
-    // nível do Craby: cresce com o total de tarefas concluídas
-    var level: (number: Int, name: String) {
-        let thresholds = [0, 10, 50, 150, 400, 1000]
-        let idx = thresholds.lastIndex(where: { data.totalTasks >= $0 }) ?? 0
-        let names = L.levelNames
-        return (idx + 1, names[min(idx, names.count - 1)])
-    }
-
     func recordDone(project: String) {
         var day = today
         day.tasks += 1
@@ -85,10 +60,6 @@ final class StatsStore {
 
     func recordAttention(project: String) {
         appendEvent(project: project, kind: "attention")
-    }
-
-    func recordLevelUp() {
-        appendEvent(project: "Craby", kind: "level")
     }
 
     // registra o tamanho atual da ninhada; retorna true se é um novo recorde (>1)
