@@ -107,41 +107,6 @@ let rightUpLeftDown = [
     ".R.R..RR..R.R.",
 ]
 
-// trabalhando: debruçado no laptop, garras alternando no teclado, teclas voando
-let laptopLeft = [
-    "..............",
-    "...Y..........",
-    "..............",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    "...........RR.",
-    ".RR........RR.",
-    "..GGGGGGGGGG..",
-    "..GLLLLLLLLG..",
-    "..GGGGGGGGGG..",
-    "..............",
-]
-
-let laptopRight = [
-    "..............",
-    "..........Y...",
-    "..............",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    ".RR...........",
-    ".RR........RR.",
-    "..GGGGGGGGGG..",
-    "..GLLLLLLLLG..",
-    "..GGGGGGGGGG..",
-    "..............",
-]
-
 // dormindo: "Zzz" flutuando (dois quadros, o Z sobe)
 let sleepFx1 = [
     "..........WWW.",
@@ -368,31 +333,10 @@ func paletteColor(_ ch: Character) -> NSColor? {
 enum PetState: String, CaseIterable {
     case idle, working, done, attention, sleeping
 
+    // a arte de cada estado agora nasce do motor de cenas+props (Scenes.swift)
     var frames: [[String]] {
         if let custom = customFrames[rawValue] { return custom }
-        switch self {
-        case .idle:
-            return [
-                emptyFx + clawsUp,
-                emptyFx + clawsDown,
-                emptyFx + clawsUp,
-                emptyFx + blinking(clawsDown),
-            ]
-        case .working:
-            return [laptopLeft, laptopRight]
-        case .done:
-            return [sparkleFx1 + clawsUp, jumping(sparkleFx2, clawsUp)]
-        case .attention:
-            return [
-                exclaimFx + clawsUp,
-                emptyFx + rightUpLeftDown,
-                exclaimFx + clawsUp,
-                emptyFx + leftUpRightDown,
-            ]
-        case .sleeping:
-            let asleep = blinking(clawsDown)
-            return [sleepFx1 + asleep, sleepFx2 + asleep]
-        }
+        return composedFrames(for: self)
     }
 
     var interval: TimeInterval {

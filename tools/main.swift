@@ -87,8 +87,9 @@ case "promo":
         switch t {
         case 0..<16: // ocioso
             return emptyFx + [clawsUp, clawsDown, clawsUp, blinking(clawsDown)][(t / 4) % 4]
-        case 16..<48: // trabalhando no laptop
-            return (t % 4 < 2) ? laptopLeft : laptopRight
+        case 16..<48: // trabalhando no laptop (cena debruçado + prop laptop)
+            return compose(
+                scene: sceneDebrucado, props: [propLaptop], frame: (t % 4 < 2) ? 0 : 1)
         case 48..<64: // comemorando
             return (t % 8 < 4) ? sparkleFx1 + clawsUp : jumping(sparkleFx2, clawsUp)
         default: // atenção
