@@ -36,19 +36,6 @@ check(eyesLooking(left: true, [".RRWBRRRRWBRR."]) == [".RRBWRRRRBWRR."],
 check(eyesLooking(left: false, [".RRWBRRRRWBRR."]) == [".RRWBRRRRWBRR."],
       "olhos: direita mantém a arte original")
 
-for level in [1, 3, 5, 6, 99] {
-    for state in PetState.allCases {
-        for (i, frame) in state.frames.enumerated() {
-            check(isValidFrame(overlayAccessory(frame, level: level)),
-                  "acessório nível \(level): \(state.rawValue) quadro \(i) continua 14x14")
-        }
-    }
-}
-check(overlayAccessory(emptyFx + clawsUp, level: 1) == emptyFx + clawsUp,
-      "acessório: nível baixo não altera a arte")
-check(overlayAccessory(emptyFx + clawsUp, level: 6) != emptyFx + clawsUp,
-      "acessório: coroa altera a arte")
-
 // --- filhotes (ninhada de subagentes) ---
 
 let babyFrames: [(String, [String])] = [

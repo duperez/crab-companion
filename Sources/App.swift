@@ -29,6 +29,17 @@ struct SessionInfo {
     var project: String?
     var workingSince: Date?
     var summary: String? // resuminho da última resposta (hook Stop)
+    var source: String = "claude" // quem emite: claude, ci, docker, custom…
+    var url: String? // alvo clicável (run do CI, PR…) — clique no pet abre
+}
+
+// vigília: coisas vivas (servidores, containers) que o Craby está de olho
+struct WatchInfo {
+    var label: String
+    var source: String
+    var url: String?
+    var alive: Bool
+    var at: Date
 }
 
 struct CrabyConfig: Codable {
@@ -64,8 +75,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var barImageCache: [String: NSImage] = [:]
     var floatingVisible = true
 
-    // estado por sessão do Claude Code (multi-sessão)
+    // estado por sessão (multi-sessão, multi-fonte)
     var sessions: [String: SessionInfo] = [:]
+    // itens sob vigília (POST /watch)
+    var watches: [String: WatchInfo] = [:]
+    // legenda persistente enquanto algo pede atenção
+    var captionWindow: NSWindow?
+    var captionIndex = 0
 
     // fila de pedidos de permissão/pergunta (conn nil = balão informativo local)
     var askQueue: [(payload: AskPayload, conn: NWConnection?)] = []
@@ -188,6 +204,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     }
                     if command == "celebrate" {
                         self.celebrate(query["text"])
+                        return nil
+                    }
+                    // evento estruturado (qualquer cérebro): /event?source=ci&
+                    //   session=id&state=working|done|attention|idle&project=&detail=&url=
+                    if command == "event" {
+                        guard let state = PetState(rawValue: query["state"] ?? "")
+                        else { return "bad state" }
+                        let source = query["source"] ?? "custom"
+                        let session = query["session"] ?? "default"
+                        self.sessionEvent(
+                            state,
+                            session: source == "claude" ? session : "\(source):\(session)",
+                            project: query["project"],
+                            summary: query["detail"],
+                            source: source,
+                            url: query["url"])
+                        return nil
+                    }
+                    // vigília: /watch?id=x&label=&source=&url=&status=alive|dead|gone
+                    if command == "watch" {
+                        guard let id = query["id"], !id.isEmpty else { return "bad id" }
+                        self.watchEvent(
+                            id: id,
+                            label: query["label"] ?? id,
+                            source: query["source"] ?? "custom",
+                            url: query["url"],
+                            status: query["status"] ?? "alive")
                         return nil
                     }
                     if let newState = PetState(rawValue: command) {
@@ -603,15 +646,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 "session": key,
                 "project": info.project ?? "",
                 "state": info.state.rawValue,
+                "source": info.source,
+                "url": info.url ?? "",
+            ]
+        }
+        let watchList = watches.map { id, info in
+            [
+                "id": id,
+                "label": info.label,
+                "source": info.source,
+                "alive": info.alive ? "true" : "false",
+                "url": info.url ?? "",
             ]
         }
         let payload: [String: Any] = [
             "version": appVersion,
             "displayed": state.rawValue,
-            "level": stats.level.number,
             "totalTasks": stats.data.totalTasks,
             "subagents": liveBabyCount(),
             "sessions": sessionList,
+            "watches": watchList,
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8)
@@ -705,10 +759,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        let lvl = stats.level
         let header = NSMenuItem(
-            title: L.levelLine(level: lvl.number, name: lvl.name, total: stats.data.totalTasks),
-            action: nil, keyEquivalent: "")
+            title: L.totalLine(stats.data.totalTasks), action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
 
@@ -720,18 +772,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         todayItem.isEnabled = false
         menu.addItem(todayItem)
 
-        let streak = stats.streakDays
-        if streak >= 2 {
-            let streakItem = NSMenuItem(title: L.streak(streak), action: nil, keyEquivalent: "")
-            streakItem.isEnabled = false
-            menu.addItem(streakItem)
-        }
-
         if let maxBrood = day.maxBrood, maxBrood > 1 {
             let broodItem = NSMenuItem(
                 title: L.broodLine(maxBrood), action: nil, keyEquivalent: "")
             broodItem.isEnabled = false
             menu.addItem(broodItem)
+        }
+
+        // itens sob vigília: clicáveis quando têm URL
+        if !watches.isEmpty {
+            let watchHeader = NSMenuItem(
+                title: "👁 \(L.watching):", action: nil, keyEquivalent: "")
+            watchHeader.isEnabled = false
+            menu.addItem(watchHeader)
+            for (_, info) in watches.sorted(by: { $0.value.label < $1.value.label }) {
+                let item = NSMenuItem(
+                    title: "   \(info.alive ? "🟢" : "🔴") \(info.label) · \(info.source)",
+                    action: info.url != nil ? #selector(watchItemClicked(_:)) : nil,
+                    keyEquivalent: "")
+                item.target = self
+                item.representedObject = info.url
+                menu.addItem(item)
+            }
         }
 
         // janelas do plano Claude (só aparece se houver token disponível)
@@ -757,7 +819,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 let kind: String
                 switch event.kind {
                 case "done": kind = L.stateLabel(.done)
-                case "level": kind = L.levelUp
+                case "level": kind = "🎉" // eventos antigos de nível (deprecado)
                 default: kind = L.stateLabel(.attention)
                 }
                 // clicar num evento foca a janela daquele projeto
@@ -885,7 +947,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func sessionEvent(
         _ newState: PetState, session: String, project: String? = nil,
-        summary: String? = nil
+        summary: String? = nil, source: String = "claude", url: String? = nil
     ) {
         let now = Date()
         maybeGreet() // primeiro evento do dia rende um "bom dia"
@@ -903,11 +965,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             workingSince = nil
         }
         if newState == .done {
-            let levelBefore = stats.level.number
             stats.recordDone(project: proj ?? "?")
-            if stats.level.number > levelBefore {
-                celebrateLevelUp()
-            } else if [5, 10, 20, 50].contains(stats.today.tasks) {
+            if [5, 10, 20, 50].contains(stats.today.tasks) {
                 showToast(L.tasksMilestone(stats.today.tasks))
             } else if let summary, !summary.isEmpty, session != "ask" {
                 showToast("✅ \(proj ?? "?"): \(String(summary.prefix(80)))")
@@ -920,8 +979,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         sessions[session] = SessionInfo(
             state: newState, at: now, project: proj, workingSince: workingSince,
-            summary: summary ?? existing?.summary)
+            summary: summary ?? existing?.summary,
+            source: source, url: url ?? existing?.url)
         recomputeDisplayed()
+    }
+
+    // ------------------------------------------------------------------
+    // Vigília: registrar/atualizar itens vivos; queda vira attention
+    // ------------------------------------------------------------------
+
+    func watchEvent(id: String, label: String, source: String, url: String?, status: String) {
+        lastEventAt = Date()
+        switch status {
+        case "dead":
+            let info = watches[id]
+            watches[id] = WatchInfo(
+                label: info?.label ?? label, source: info?.source ?? source,
+                url: url ?? info?.url, alive: false, at: Date())
+            // queda pede sua atenção pelas vias normais (legenda, clique, ntfy)
+            sessionEvent(
+                .attention, session: "watch:\(id)",
+                project: info?.label ?? label,
+                summary: L.watchDown(info?.label ?? label),
+                source: info?.source ?? source, url: url ?? info?.url)
+        case "gone":
+            watches.removeValue(forKey: id)
+            sessions.removeValue(forKey: "watch:\(id)")
+            recomputeDisplayed()
+        default: // "alive": registro ou batimento
+            watches[id] = WatchInfo(
+                label: label, source: source, url: url, alive: true, at: Date())
+            sessions.removeValue(forKey: "watch:\(id)") // limpa alarme antigo
+            recomputeDisplayed()
+        }
     }
 
     // "bom dia" uma vez por dia, no primeiro sinal de vida
@@ -931,15 +1021,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let today = formatter.string(from: Date())
         guard UserDefaults.standard.string(forKey: "lastGreetDay") != today else { return }
         UserDefaults.standard.set(today, forKey: "lastGreetDay")
-        let streak = stats.streakDays
-        showToast(streak >= 3 ? "\(L.goodMorning) \(L.streak(streak))" : L.goodMorning)
+        showToast(L.goodMorning)
     }
 
     // clique no pet: se alguém precisa de você, foca a janela daquela sessão;
     // e reconhece só os AVISOS (attention/done) — trabalho em andamento continua
     func petClicked() {
         if let needy = sessions.values.first(where: { $0.state == .attention }) {
-            focusSession(project: needy.project)
+            // alvo clicável (run do CI, PR…) vence; senão, foca a janela do projeto
+            if let raw = needy.url, let url = URL(string: raw) {
+                NSWorkspace.shared.open(url)
+            } else {
+                focusSession(project: needy.project)
+            }
         }
         for (key, info) in sessions where info.state == .attention || info.state == .done {
             sessions[key]?.state = .idle
@@ -965,6 +1059,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             displayed = .sleeping
         }
         updateTooltip()
+        updateCaption()
         if displayed != state {
             playSound(for: displayed)
             applyState(displayed)
@@ -973,9 +1068,96 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    // legenda persistente: enquanto algo pede atenção, o Craby diz QUEM chama
+    // (atribuição na chamada; na calmaria a legenda some)
+    func updateCaption() {
+        let needy = sessions
+            .filter { $0.value.state == .attention }
+            .sorted { $0.key < $1.key }
+        guard !needy.isEmpty, floatingVisible, window.isVisible, !hiddenForSharing
+        else {
+            captionWindow?.orderOut(nil)
+            captionWindow = nil
+            return
+        }
+        if needy.count > 1 { captionIndex += 1 } // rotaciona a cada atualização
+        let info = needy[captionIndex % needy.count].value
+        var text = info.summary ?? info.project ?? L.sessionFallback
+        if info.source != "claude", !(text.hasPrefix("[")) {
+            text = "[\(info.source)] \(text)"
+        }
+        text = String(text.prefix(60))
+        if needy.count > 1 { text += "  +\(needy.count - 1)" }
+
+        // mesma legenda já na tela: só reposiciona (acompanha o pet)
+        if let existing = captionWindow, existing.title == text {
+            positionCaption(existing)
+            return
+        }
+        captionWindow?.orderOut(nil)
+
+        let font = NSFont.systemFont(ofSize: 11, weight: .medium)
+        let size = (text as NSString).size(withAttributes: [.font: font])
+        let w = min(size.width + 22, 280)
+        let h: CGFloat = 22
+
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: w, height: h),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered, defer: false)
+        panel.title = text
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.level = .floating
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.ignoresMouseEvents = true // clique é no pet, não na legenda
+        panel.hasShadow = true
+
+        let box = NSView(frame: NSRect(x: 0, y: 0, width: w, height: h))
+        box.wantsLayer = true
+        box.layer?.backgroundColor = NSColor(calibratedWhite: 0.13, alpha: 0.95).cgColor
+        box.layer?.cornerRadius = 6
+        box.layer?.borderWidth = 1.5
+        box.layer?.borderColor = NSColor.systemYellow.cgColor
+        let label = NSTextField(labelWithString: text)
+        label.font = font
+        label.textColor = .white
+        label.lineBreakMode = .byTruncatingTail
+        label.frame = NSRect(x: 10, y: 3, width: w - 20, height: 16)
+        box.addSubview(label)
+        panel.contentView = box
+
+        positionCaption(panel)
+        panel.orderFrontRegardless()
+        captionWindow = panel
+    }
+
+    private func positionCaption(_ panel: NSWindow) {
+        let pet = window.frame
+        let area = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame
+            ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        var x = pet.midX - panel.frame.width / 2
+        x = max(area.minX + 4, min(x, area.maxX - panel.frame.width - 4))
+        var y = pet.minY - panel.frame.height - 4
+        if y < area.minY + 4 { y = pet.maxY + 4 }
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    @objc func watchItemClicked(_ sender: NSMenuItem) {
+        if let raw = sender.representedObject as? String, let url = URL(string: raw) {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     private func updateTooltip() {
-        let planSuffix = planLines().isEmpty
+        var planSuffix = planLines().isEmpty
             ? "" : "\n" + planLines().joined(separator: "\n")
+        if !watches.isEmpty {
+            let lines = watches.values
+                .map { "👁 \($0.label): \($0.alive ? L.alive : L.down)" }
+                .sorted()
+            planSuffix = "\n" + lines.joined(separator: "\n") + planSuffix
+        }
         let active = sessions.filter { $0.value.state != .idle }
         if active.isEmpty {
             petView.toolTip = L.allCalm + planSuffix
@@ -984,7 +1166,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let now = Date()
         petView.toolTip = active
             .map { key, info -> String in
-                let name = info.project ?? L.sessionFallback
+                var name = info.project ?? L.sessionFallback
+                if info.source != "claude" { name = "[\(info.source)] \(name)" }
                 var line: String
                 if info.state == .working, let since = info.workingSince {
                     let minutes = max(0, Int(now.timeIntervalSince(since) / 60))
@@ -1051,12 +1234,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
               let chosen = idleQuirks.randomElement()
         else { return }
         startQuirk(chosen)
-    }
-
-    func celebrateLevelUp() {
-        stats.recordLevelUp()
-        play(.levelUp)
-        startQuirk(levelUpFrames + levelUpFrames)
     }
 
     // festa avulsa (ex.: git push via hook pre-push) — confete + toast
@@ -1452,13 +1629,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             lookingLeft = NSEvent.mouseLocation.x < window.frame.midX
             grid = eyesLooking(left: lookingLeft, grid)
         }
-        let level = stats.level.number
-        grid = overlaySweat(overlayBadges(overlayAccessory(grid, level: level)))
+        grid = overlaySweat(overlayBadges(grid))
         petView.grid = grid
         petView.needsDisplay = true
         // quadros de mania não entram no cache (são transitórios e variados)
         let key = quirk.isEmpty
-            ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)-\(lookingLeft ? 1 : 0)-\(level)"
+            ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)-\(lookingLeft ? 1 : 0)"
             : nil
         statusItem.button?.image = barImage(for: grid, key: key)
     }
