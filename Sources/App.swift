@@ -1726,11 +1726,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    // working multi-fonte: se quem trabalha NÃO é o Claude, a fonte
+    // vencedora veste o Craby com o figurino dela (addon ou default)
+    private func activityOutfitFrames() -> ([[String]], String)? {
+        guard state == .working else { return nil }
+        let sources = Set(
+            sessions.values.filter { $0.state == .working }.map(\.source))
+        guard !sources.isEmpty else { return nil }
+        let order = ["claude"] + (config.sourcePriority ?? ["ci", "docker"])
+        let winner = order.first(where: { sources.contains($0) })
+            ?? sources.sorted()[0]
+        guard winner != "claude" else { return nil } // laptop é do Claude
+        if let outfit = addonManager.outfit(for: winner) {
+            return ((0..<outfit.scene.frames.count).map {
+                compose(scene: outfit.scene, props: outfit.props, frame: $0)
+            }, winner)
+        }
+        let props = winner == "docker" ? [propCaixote] : [propLupa]
+        return ((0..<sceneAtento.frames.count).map {
+            compose(scene: sceneAtento, props: props, frame: $0)
+        }, winner)
+    }
+
     private func render() {
         var frames = quirk.isEmpty ? state.frames : []
-        if quirk.isEmpty, state == .idle,
+        var outfitTag = "n"
+        if quirk.isEmpty, let (act, winner) = activityOutfitFrames() {
+            frames = act
+            outfitTag = "a-\(winner)"
+        } else if quirk.isEmpty, state == .idle,
            watches.values.contains(where: { $0.alive }) {
             frames = watchingFrames
+            outfitTag = "w"
         }
         var grid = quirk.isEmpty
             ? frames[frameIndex % frames.count]
@@ -1745,12 +1772,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         petView.grid = grid
         petView.needsDisplay = true
         // quadros de mania não entram no cache (são transitórios e variados)
-        let watching = quirk.isEmpty && state == .idle
-            && watches.values.contains(where: { $0.alive })
-        // o vencedor entra na chave do cache (figurinos diferentes por fonte)
-        let watchTag = watching
-            ? (watches.values.filter { $0.alive }.map(\.source).sorted().joined())
-            : "n"
+        // o figurino ativo entra na chave do cache
+        let watchTag = outfitTag + (watches.values.filter { $0.alive }
+            .map(\.source).sorted().joined())
         let key = quirk.isEmpty
             ? "\(state.rawValue)-\(frameIndex)-\(min(workingCount, 4))-\(isSweating ? 1 : 0)-\(lookingLeft ? 1 : 0)-\(watchTag)"
             : nil
