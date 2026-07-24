@@ -95,7 +95,9 @@ let sceneIdle = Scene(
         emptyFx + blinking(idleV2a),
     ],
     slots: [
-        "cabeca": SceneSlot(pos: [(2, 5), (2, 5), (2, 5), (2, 5)], maxW: 10, maxH: 2)
+        "cabeca": SceneSlot(pos: [(2, 5), (2, 5), (2, 5), (2, 5)], maxW: 10, maxH: 2),
+        // visitas calmas também podem espiar com o Craby em paz
+        "chao": SceneSlot(pos: [(6, 9)], maxW: 8, maxH: 5),
     ])
 
 // debruçado (v2): talos olhando a tela, bracinhos clicando nas teclas —

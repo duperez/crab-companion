@@ -2,7 +2,20 @@
   "name": "pudim-costume",
   "description": "figurino do Pudim (CatLockPlus) — espia a cena quando tranca o teclado",
   "source": "pudim",
-  "scene": "atento",
-  "props": { "chao": [".E....E.", ".EE..EE.", "..cccc..", ".cKKKKc.", ".KUKKUK."] },
-  "cores": { "c": "#eed9b3", "K": "#2a1c14", "U": "#5a99e6", "E": "#857062" }
+  "scene": "idle",
+  "props": {
+    "chao": [
+      ".E....E.",
+      ".EE..EE.",
+      "..cccc..",
+      ".cKKKKc.",
+      ".KUKKUK."
+    ]
+  },
+  "cores": {
+    "c": "#eed9b3",
+    "K": "#2a1c14",
+    "U": "#5a99e6",
+    "E": "#857062"
+  }
 }
