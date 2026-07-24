@@ -78,7 +78,10 @@ final class ControlServer {
     static var corsOrigins: [ObjectIdentifier: String] = [:]
 
     private func route(_ request: HTTPRequest, conn: NWConnection) {
-        if let origin = request.headers["origin"], origin == Self.allowedSiteOrigin {
+        if let origin = request.headers["origin"],
+           origin == Self.allowedSiteOrigin
+            || origin.hasPrefix("http://localhost")
+            || origin.hasPrefix("http://127.0.0.1") {
             Self.corsOrigins[ObjectIdentifier(conn)] = origin
         }
         // preflight (inclui Private Network Access do Chrome)

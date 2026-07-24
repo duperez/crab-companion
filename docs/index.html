@@ -3,119 +3,254 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Craby — Crab Companion</title>
-<meta name="description" content="Craby, a pixel-art desktop crab for macOS that watches your development workflow — a presence interface any local brain can use as its face. Claude Code is the flagship integration.">
+<title>Craby — a pixel crab that watches your development workflow</title>
+<meta name="description" content="Craby, a pixel-art desktop crab for macOS that watches your development workflow. A presence interface with an open protocol — Claude Code is the flagship integration.">
 <link rel="icon" href="icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#14161a;--panel:#1d2026;--text:#e8e9eb;--muted:#9aa1ab;--accent:#e8593d;--yellow:#ffd126;--border:#2c3038}
+  :root{--bg:#14161a;--panel:#1d2026;--panel2:#181b20;--text:#e8e9eb;--muted:#9aa1ab;--accent:#e8593d;--yellow:#ffd126;--green:#5fbf77;--border:#2c3038;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
   *{margin:0;padding:0;box-sizing:border-box}
-  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.65}
-  .px{font-family:"Press Start 2P",monospace}
-  .wrap{max-width:880px;margin:0 auto;padding:0 24px}
-  header{padding:72px 0 40px;text-align:center}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.6}
   canvas{image-rendering:pixelated;display:block;margin:0 auto}
-  h1{font-size:40px;margin:20px 0 12px;color:var(--accent)}
-  .tagline{color:var(--muted);font-size:18px;max-width:560px;margin:0 auto 24px}
-  .states{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:28px}
-  .states button{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px}
-  .states button.on{border-color:var(--accent);color:var(--text)}
-  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-  .btn{display:inline-block;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px}
+  .wrap{max-width:920px;margin:0 auto;padding:0 24px}
+  a{color:var(--yellow)}
+  .px{font-family:var(--mono);font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+  h2.px{font-size:14px;color:var(--yellow);margin-bottom:14px}
+  h2.px::before{content:"▚ ";color:var(--accent)}
+  section{padding:34px 0}
+  .mono{font-family:var(--mono)}
+
+  /* hero */
+  header{padding:64px 0 36px;text-align:center}
+  .scene-label{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:10px;min-height:18px}
+  .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 6px}
+  .chips button{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:7px 13px;border-radius:8px;cursor:pointer;font-size:13px}
+  .chips button.on{border-color:var(--accent);color:var(--text)}
+  .brood-ts{color:var(--muted);font-size:12px;margin:4px 0 18px}
+  .tagline{font-size:21px;font-weight:600;margin:18px auto 8px;max-width:620px}
+  .sub{color:var(--muted);font-size:15px;max-width:640px;margin:0 auto 26px}
+  .install{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;max-width:640px;margin:0 auto;text-align:left}
+  .install code{font-family:var(--mono);font-size:14px;color:var(--text);display:block;white-space:pre;overflow-x:auto;padding-right:64px}
+  .install code::before{content:"$ ";color:var(--accent)}
+  .copybtn{position:absolute;top:12px;right:12px;background:var(--bg);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px}
+  .hero-links{margin-top:18px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;padding:11px 20px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px}
   .btn-a{background:var(--accent);color:#fff}
   .btn-b{background:var(--panel);color:var(--text);border:1px solid var(--border)}
-  section{padding:36px 0}
-  h2{font-size:15px;margin-bottom:20px;color:var(--yellow)}
-  .install{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative}
-  .install code{font-family:ui-monospace,Menlo,monospace;font-size:14px;color:var(--text);display:block;white-space:pre;overflow-x:auto}
-  .install .copy{position:absolute;top:12px;right:12px;background:var(--bg);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px}
-  .req{color:var(--muted);font-size:13px;margin-top:10px}
-  .req a{color:var(--muted)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px}
-  .card h3{font-size:15px;margin-bottom:6px}
-  .card p{color:var(--muted);font-size:14px}
-  .how{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;overflow-x:auto}
-  .how pre{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--muted);line-height:1.9}
-  .how pre b{color:var(--accent);font-weight:600}
-  .ts{color:var(--muted);font-size:12px;text-align:center;margin:6px 0 0}
-  footer{padding:40px 0 56px;text-align:center;color:var(--muted);font-size:13px}
+  .req{color:var(--muted);font-size:12px;margin-top:12px}
+
+  /* playground */
+  .banner{border-radius:10px;padding:12px 16px;font-size:14px;margin-bottom:16px;border:1px solid var(--border);background:var(--panel)}
+  .banner.live{border-color:var(--green);color:var(--green)}
+  .banner.demo{color:var(--muted)}
+  .pg-group{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .pg-group h3{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:8px;font-family:var(--mono)}
+  .pg-group button{background:var(--yellow);color:#1a1a1a;border:0;border-radius:7px;padding:7px 13px;margin:3px 6px 3px 0;font-weight:600;font-size:13px;cursor:pointer}
+  .pg-group button.alt{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+  .pg-group input,.pg-group select{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;margin:3px 6px 3px 0;font-size:13px;font-family:var(--mono)}
+  .pg-group small{color:var(--muted);display:block;margin-top:4px}
+  body.demo-mode .pg-live button{opacity:.4;cursor:not-allowed}
+  #pgOut{background:#0e1013;border:1px solid var(--border);border-radius:10px;padding:12px;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:12.5px;min-height:56px;color:var(--muted)}
+  .thesis{color:var(--muted);font-size:13px;margin:12px 0 0}
+
+  /* addons */
+  .lede{color:var(--muted);font-size:15px;max-width:700px;margin-bottom:16px}
+  pre.code{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--mono);font-size:13px;line-height:1.7;overflow-x:auto;color:var(--text)}
+  pre.code .c{color:var(--muted)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  @media(max-width:720px){.two-col{grid-template-columns:1fr}}
+  .builder{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:18px}
+  .builder h3{font-size:15px;margin-bottom:4px}
+  .builder .hint{color:var(--muted);font-size:13px;margin-bottom:10px}
+  .builder input,.builder select{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;margin:3px 6px 3px 0;font-size:13px;font-family:var(--mono)}
+  .builder label{font-size:11px;color:var(--muted);display:inline-block;margin-right:2px}
+  #abPal button{width:30px;height:30px;border:2px solid transparent;border-radius:6px;margin:2px 4px 2px 0;color:#fff;font-family:var(--mono);font-size:12px;cursor:pointer;text-shadow:0 0 3px #000}
+  #abPal button.sel{border-color:#fff}
+  #abPal button.eraser{background:var(--bg);color:var(--muted);border:2px solid var(--border);width:auto;padding:0 10px}
+  #abPal button.eraser.sel{border-color:#fff;color:var(--text)}
+  #abGrid{line-height:0;margin:12px 0;overflow-x:auto;padding-bottom:4px}
+  #abGrid span{display:inline-block;width:20px;height:20px;border:1px solid #24272d;box-sizing:border-box}
+  #abGrid span.slot{border-color:var(--yellow);cursor:pointer}
+  .builder .gen{background:var(--yellow);color:#1a1a1a;border:0;border-radius:8px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;margin-top:4px}
+  #abOutWrap{position:relative;margin-top:12px;display:none}
+  #abOut{background:#0e1013;border:1px solid var(--border);border-radius:10px;padding:14px;font-family:var(--mono);font-size:12.5px;overflow-x:auto}
+
+  /* how it works */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .step b{display:block;color:var(--accent);font-family:var(--mono);font-size:12px;margin-bottom:6px}
+  .step p{color:var(--muted);font-size:14px}
+
+  /* features */
+  ul.feat{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px 18px}
+  ul.feat li{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13.5px;color:var(--text)}
+
+  footer{padding:44px 0 60px;text-align:center;color:var(--muted);font-size:13px}
   footer a{color:var(--muted)}
 </style>
 </head>
 <body>
 
+<!-- ══════════════════ 1 · HERO ══════════════════ -->
 <header class="wrap">
-  <canvas id="crab" width="14" height="14" style="width:196px;height:196px"></canvas>
-  <canvas id="brood" width="23" height="6" style="width:184px;height:48px"></canvas>
-  <p class="ts">his brood — one baby per running subagent</p>
-  <h1 class="px">CRABY</h1>
-  <p class="tagline">A tiny pixel-art crab that watches your development workflow — a presence interface any local brain can use as its face. Claude Code is the flagship integration: see what it's up to and answer back without touching the terminal.</p>
-  <div class="states" id="states">
+  <canvas id="crab" width="14" height="14" style="width:182px;height:182px" aria-label="Craby, an animated pixel-art crab"></canvas>
+  <p class="scene-label" id="sceneLabel"></p>
+  <div class="chips" id="states">
     <button data-s="idle">😴 idle</button>
-    <button data-s="working" class="on">💻 working</button>
+    <button data-s="working">💻 working</button>
     <button data-s="done">🎉 done</button>
     <button data-s="attention">❗ needs you</button>
   </div>
-  <div class="cta">
+  <canvas id="brood" width="23" height="6" style="width:161px;height:42px" aria-label="Baby crabs hatching, living and retiring"></canvas>
+  <p class="brood-ts">his brood — one baby crab per running subagent</p>
+
+  <canvas id="title" width="29" height="5" style="width:232px;height:40px" aria-label="CRABY"></canvas>
+  <h1 style="position:absolute;left:-9999px">Craby</h1>
+  <p class="tagline">A pixel crab that watches your development workflow.</p>
+  <p class="sub">A presence interface for your Mac — Claude Code is the flagship integration, and the protocol is open to any brain that can speak HTTP.</p>
+
+  <div class="install">
+    <button class="copybtn" onclick="copyEl('cmd',this)">copy</button>
+    <code id="cmd">brew tap duperez/craby &amp;&amp; brew install --cask craby</code>
+  </div>
+  <p class="req">macOS 13+ · ~300 KB · zero dependencies · MIT</p>
+
+  <div class="hero-links">
     <a class="btn btn-a" href="https://github.com/duperez/crab-companion">View on GitHub</a>
-    <a class="btn btn-b" href="https://github.com/duperez/crab-companion/blob/main/README.pt-BR.md">Leia em Português</a>
+    <a class="btn btn-b" href="https://github.com/duperez/crab-companion/blob/main/PROTOCOL.md">Read PROTOCOL.md</a>
   </div>
 </header>
 
-<section class="wrap">
-  <h2 class="px">Install</h2>
-  <div class="install">
-    <button class="copy" onclick="navigator.clipboard.writeText(document.getElementById('cmd').innerText);this.innerText='copied!';setTimeout(()=>this.innerText='copy',1500)">copy</button>
-    <code id="cmd">git clone https://github.com/duperez/crab-companion.git
-cd crab-companion
-./install.sh</code>
+<!-- ══════════════════ 2 · LIVE PLAYGROUND ══════════════════ -->
+<section class="wrap" id="playground">
+  <h2 class="px">Try it — right from this page</h2>
+  <div class="banner" id="pgBanner">Looking for a Craby on your machine…</div>
+
+  <div class="pg-live">
+    <div class="pg-group">
+      <h3>states · session "website"</h3>
+      <button data-live onclick="pg('/working?session=website&amp;project=website')">💻 working</button>
+      <button data-live onclick="pg('/done?session=website&amp;project=website&amp;summary=greetings%20from%20the%20website')">🎉 done</button>
+      <button data-live onclick="pg('/attention?session=website&amp;project=website')">❗ attention</button>
+      <button data-live class="alt" onclick="pg('/idle?session=website&amp;project=website')">😴 idle</button>
+    </div>
+
+    <div class="pg-group">
+      <h3>structured event · /event</h3>
+      <label>source</label><input id="evSource" value="ci" size="6">
+      <label>state</label><select id="evState"><option>working</option><option>done</option><option>attention</option><option>idle</option></select>
+      <label>detail</label><input id="evDetail" value="pipeline on the test step" size="24">
+      <button data-live onclick="sendEvent()">send /event</button>
+      <small>sources give attribution — the caption on the pet says who's calling</small>
+    </div>
+
+    <div class="pg-group">
+      <h3>keeping watch · /watch · id "website-demo"</h3>
+      <button data-live onclick="pgWatch('alive')">🟢 alive</button>
+      <button data-live onclick="pgWatch('dead')">🔴 dead</button>
+      <button data-live class="alt" onclick="pgWatch('gone')">gone</button>
+      <small>alive lands in the tooltip and menu · dead raises an attention event</small>
+    </div>
+
+    <div class="pg-group">
+      <h3>party · /celebrate</h3>
+      <input id="cText" value="Hello from the website! 🦀" size="26">
+      <button data-live onclick="pg('/celebrate?text='+encodeURIComponent(val('cText')))">🎊 celebrate</button>
+    </div>
   </div>
-  <p class="req">Requires macOS 13+, Xcode Command Line Tools, <a href="https://jqlang.org">jq</a> and <a href="https://claude.com/claude-code">Claude Code</a>. ~300 KB, zero dependencies, MIT.</p>
+
+  <pre id="pgOut">—</pre>
+  <p class="thesis">This page is a static site on GitHub Pages — it drives the pet through the exact same open protocol every other integration uses. Any app can talk to Craby. Even a web page.</p>
 </section>
 
-<section class="wrap">
-  <h2 class="px">What Craby does</h2>
-  <div class="grid">
-    <div class="card"><h3>🖥️ Always in the corner of your eye</h3><p>Floats above every app and every Space — even fullscreen. Never steals focus, no Dock icon.</p></div>
-    <div class="card"><h3>💬 Answer permissions from a bubble</h3><p>When Claude asks for permission, click Allow / Always allow / Deny right under Craby. Dangerous commands get a red border. No answer? Falls back to the terminal — Craby never decides alone.</p></div>
-    <div class="card"><h3>❓ Questions too</h3><p>Multiple-choice and free-text questions through the bubble, via a simple local HTTP API any script can use.</p></div>
-    <div class="card"><h3>🗂️ Multi-session scoreboard</h3><p>Several sessions at once? Craby shows the highest-priority state, dots for parallel work, and a tooltip per project. Click to jump to the session that needs you.</p></div>
-    <div class="card"><h3>🐣 A brood of subagents</h3><p>Spawn subagents and watch baby crabs hatch from eggs below Craby — they scuttle while the subagent runs, retire with a tiny cane and vanish in a star poof (gray poof if it failed). No other coding pet does this.</p></div>
-    <div class="card"><h3>📍 Menu bar twin</h3><p>A mini animated Craby in the menu bar, always in sync. Collapse the floating one when you need a clean screen.</p></div>
-    <div class="card"><h3>🔔 Subtle sounds</h3><p>A soft pling when work finishes, a ping when Claude needs you. Toggle anytime from the menu bar.</p></div>
-    <div class="card"><h3>🧩 Addons</h3><p>Drop a folder with an addon.json and an executable and Craby learns new tricks. github-watch and live-watch ship out of the box — or build your own in the visual builder at the playground (localhost:4923).</p></div>
-    <div class="card"><h3>🔍 Keeping watch</h3><p>Put Craby on vigil with /watch: he raises a little magnifying glass while observing, and sits next to a crate when he's watching Docker containers.</p></div>
-    <div class="card"><h3>📜 Open protocol</h3><p>Everything runs over a documented local HTTP protocol (PROTOCOL.md). Any script, tool or local brain can drive Craby — Claude Code is just the first face-wearer.</p></div>
-    <div class="card"><h3>📊 Daily stats &amp; plan usage</h3><p>Tasks finished, projects, time worked, recent events — plus how much of your Claude plan you've used today.</p></div>
-    <div class="card"><h3>📱 Phone alerts when away</h3><p>Optional ntfy integration: if you're not at the Mac and Claude needs you, your phone gets a ping.</p></div>
-    <div class="card"><h3>🎨 Custom sprite packs</h3><p>Sprites are text grids. Drop a sprites.json to reskin Craby entirely — cat, octopus, you name it.</p></div>
-    <div class="card"><h3>💤 He's alive</h3><p>Idle quirks, a sweat drop on long tasks, naps when nothing happens, a confetti party every time you git push — and when you swipe to another Space, he materializes out of a little magic cloud, <em>poof</em>.</p></div>
+<!-- ══════════════════ 3 · ADDONS ══════════════════ -->
+<section class="wrap" id="addons">
+  <h2 class="px">Addons</h2>
+  <p class="lede">An addon is a folder: a manifest plus one executable. Craby runs the executable on an interval — it polls the real thing (CI, a server, a container) and reports back via <span class="mono">/event</span> and <span class="mono">/watch</span>. The manifest also picks a scene and paints a costume, so the crab dresses for the job.</p>
+
+  <div class="two-col">
+<pre class="code"><span class="c">// addon.json — the real github-watch manifest</span>
+{
+  "name": "github-watch",
+  "description": "GitHub CI on the pet (gh)",
+  "exec": "run.sh",
+  "source": "ci",
+  "interval": 30,
+  "scene": "atento",
+  "props": { "garra": ["CW.", "CCG", "..G"] }
+}</pre>
+<pre class="code"><span class="c"># one folder = one addon</span>
+~/Library/Application Support/Craby/addons/
+└── github-watch/
+    ├── addon.json  <span class="c">← manifest + costume</span>
+    └── run.sh      <span class="c">← polls, reports, exits</span>
+
+<span class="c"># github-watch and live-watch ship as
+# editable seeds — copy one and go</span></pre>
+  </div>
+
+  <div class="builder">
+    <h3>🧩 Build a costume right here</h3>
+    <p class="hint">Pick a scene, then paint inside the yellow-bordered cells — each bordered area is a slot (claw, floor, desk, head, sky…). Hover a cell to see the slot name. Only painted slots make it into the JSON.</p>
+    <div>
+      <label>name</label><input id="abName" value="my-addon" size="10">
+      <label>description</label><input id="abDesc" value="what it does" size="14">
+      <label>exec</label><input id="abExec" value="run.sh" size="7">
+      <label>source</label><input id="abSource" value="my-source" size="9">
+      <label>interval (s)</label><input id="abInterval" value="30" size="3">
+      <label>scene</label><select id="abScene"></select>
+    </div>
+    <div id="abPal" style="margin-top:8px"></div>
+    <div id="abGrid"></div>
+    <button class="gen" onclick="abExport()">generate addon.json</button>
+    <div id="abOutWrap">
+      <button class="copybtn" onclick="copyEl('abOut',this)">copy</button>
+      <pre id="abOut"></pre>
+    </div>
+    <p class="hint" style="margin-top:10px">Save it as <span class="mono">~/Library/Application Support/Craby/addons/&lt;name&gt;/addon.json</span> next to your executable, then flip it on in the 🦀 menu.</p>
   </div>
 </section>
 
-<section class="wrap">
+<!-- ══════════════════ 4 · HOW IT WORKS ══════════════════ -->
+<section class="wrap" id="how">
   <h2 class="px">How it works</h2>
-  <div class="how"><pre>
-Claude Code ── <b>hooks</b> ──&gt; localhost:4923 ──&gt; 🦀 Craby (floating + menu bar)
-     ^                                            │
-     └────────── decision (<b>long-poll HTTP</b>) ──────┘
-
-UserPromptSubmit → typing on the laptop     Stop → celebration
-Notification → waving for attention         PermissionRequest → bubble, waits for your click
-
-The same open HTTP protocol (<b>PROTOCOL.md</b>) works for any brain, not just Claude Code —
-and addons (a folder + addon.json + an executable) plug extra behaviors into Craby.</pre>
+  <div class="steps">
+    <div class="step"><b>1 · hooks</b><p>Claude Code hooks report to the pet on <span class="mono">localhost:4923</span> — typing, finishing, needing you. Permission bubbles long-poll until you click.</p></div>
+    <div class="step"><b>2 · addons</b><p>Addons keep watch over CI runs, dev servers and containers, dressing the crab with a scene and props while they're on duty.</p></div>
+    <div class="step"><b>3 · anything</b><p>Any script that can <span class="mono">curl</span> speaks the same protocol. It's small, documented and open: <a href="https://github.com/duperez/crab-companion/blob/main/PROTOCOL.md">PROTOCOL.md</a>.</p></div>
   </div>
 </section>
 
+<!-- ══════════════════ 5 · FEATURES ══════════════════ -->
+<section class="wrap" id="features">
+  <h2 class="px">Everything else</h2>
+  <ul class="feat">
+    <li>💬 Permission bubbles — Allow / <b>Always allow</b> / Deny, red border on dangerous commands</li>
+    <li>🐣 A brood of baby crabs, one hatching per running subagent</li>
+    <li>🗂️ Multi-session: highest-priority state wins, dots for parallel work</li>
+    <li>📛 Caption says who's calling — click the pet to jump to the target</li>
+    <li>📊 Daily stats, plus how much of your Claude plan you've used today</li>
+    <li>🔔 Subtle sounds with switchable themes</li>
+    <li>🎉 A confetti party on every <span class="mono">git push</span></li>
+    <li>☁️ Materializes from a little magic cloud when you switch Spaces</li>
+    <li>🌍 Speaks English, Português and Español</li>
+    <li>🪶 Zero dependencies, ~300 KB, no Dock icon, never steals focus</li>
+    <li>🧪 A local playground at <span class="mono">localhost:4923</span> to poke every endpoint</li>
+    <li>⌨️ A <span class="mono">craby</span> CLI for scripts and one-liners</li>
+  </ul>
+</section>
+
+<!-- ══════════════════ 6 · FOOTER ══════════════════ -->
 <footer class="wrap">
-  MIT license · <a href="https://github.com/duperez/crab-companion">github.com/duperez/crab-companion</a> · built with <a href="https://claude.com/claude-code">Claude Code</a> 🦀
+  MIT license · <a href="https://github.com/duperez/crab-companion">github.com/duperez/crab-companion</a> · <a href="https://github.com/duperez/crab-companion/blob/main/PROTOCOL.md">PROTOCOL.md</a> · built with <a href="https://claude.com/claude-code">Claude Code</a> 🦀
 </footer>
 
 <script>
-// arte v3: quadros vindos de Sources/Sprites.swift + Scenes.swift do app
+/* ════════ shared helpers ════════ */
+const $=id=>document.getElementById(id);
+const val=id=>$(id).value;
+function copyEl(id,btn){navigator.clipboard.writeText($(id).innerText);btn.innerText='copied!';setTimeout(()=>btn.innerText='copy',1500)}
+
+/* ════════ canvas engine — v3 sprite grids from Sources/Sprites.swift + Scenes.swift ════════ */
 const emptyFx=["..............","..............","..............",".............."];
 const exclaimFx=["......YY......","......YY......","..............","......YY......"];
 const sparkleFx1=["..Y.......Y...","..............","......Y.......",".............."];
@@ -125,33 +260,36 @@ const idleV2b=["..............","...WB....WB...","...RRRRRRRR...","..RRRRRRRRRR.
 const waveV2=["...WB....WB..R","...WB....WB.RR","...RRRRRRRR.R.","..RRRRRRRRRR..",".RRRRRrrRRRRR.","..rRRRRRRRRr..","..R..R..R..R..","..r..r..r..r..","..............",".............."];
 const celebV2a=["R..WB....WB..R","RR.WB....WB.RR",".R.RRRRRRRR.R.","..RRRRRRRRRR..",".RRRRRrrRRRRR.","..rRRRRRRRRr..","..R..R..R..R..","..r..r..r..r..","..............",".............."];
 const celebV2b=[".R.WB....WB.R.","RR.WB....WB.RR",".R.RRRRRRRR.R.","..RRRRRRRRRR..",".RRRRRrrRRRRR.","..rRRRRRRRRr..","...R..RR..R...","..............","..............",".............."];
-// debruçado no laptop (cena + prop laptop atrás das mãos, já composto)
+// hunched over the laptop (scene + laptop prop behind the claws, pre-composed)
 const debrucadoA=["..............","...Y..........","..............","..............","..............","..WB......WB..","..WB......WB..","...RRRRRRRR...","..RRRRRRRRRR..",".RRr......rRR.","..RGGGGGGGGG..","..GLLLLLLLLG..","..GGGGGGGGGG..",".............."];
 const debrucadoB=["..............","..........Y...","..............","..............","..............","..WB......WB..","..WB......WB..","...RRRRRRRR...","..RRRRRRRRRR..",".RRr......rRR.","..GGGGGGGGGR..","..GLLLLLLLLG..","..GGGGGGGGGG..",".............."];
 const blink=g=>g.map(r=>r.replaceAll("WB","DD"));
 const STATES={
-  idle:{frames:[[...emptyFx,...idleV2a],[...emptyFx,...idleV2b],[...emptyFx,...idleV2a],[...emptyFx,...blink(idleV2a)]],ms:800},
-  working:{frames:[debrucadoA,debrucadoB],ms:200},
-  done:{frames:[[...sparkleFx1,...celebV2a],[...sparkleFx2,...celebV2b]],ms:400},
-  attention:{frames:[[...exclaimFx,...waveV2],[...emptyFx,...idleV2a],[...exclaimFx,...waveV2],[...emptyFx,...idleV2a]],ms:350},
+  idle:{frames:[[...emptyFx,...idleV2a],[...emptyFx,...idleV2b],[...emptyFx,...idleV2a],[...emptyFx,...blink(idleV2a)]],ms:800,label:"😴 idle · nothing to do"},
+  working:{frames:[debrucadoA,debrucadoB],ms:200,label:"💻 working · Claude is typing"},
+  done:{frames:[[...sparkleFx1,...celebV2a],[...sparkleFx2,...celebV2b]],ms:400,label:"🎉 done · task finished"},
+  attention:{frames:[[...exclaimFx,...waveV2],[...emptyFx,...idleV2a],[...exclaimFx,...waveV2],[...emptyFx,...idleV2a]],ms:350,label:"❗ attention · Craby needs you"},
 };
 const PAL={R:"#e8593d",D:"#b83824",r:"#ad3626",W:"#ffffff",B:"#1a1a1a",Y:"#ffd126",G:"#596373",L:"#99a6b5",C:"#4fc2f7"};
-const ctx=document.getElementById("crab").getContext("2d");
+function paintGrid(ctx,g,pal,x0,y0){g.forEach((row,y)=>[...row].forEach((ch,x)=>{if(pal[ch]){ctx.fillStyle=pal[ch];ctx.fillRect((x0||0)+x,(y0||0)+y,1,1)}}))}
+
+const ctx=$("crab").getContext("2d");
 let cur="working",idx=0,timer=null;
-function draw(){
-  const g=STATES[cur].frames[idx];
-  ctx.clearRect(0,0,14,14);
-  g.forEach((row,y)=>[...row].forEach((ch,x)=>{if(PAL[ch]){ctx.fillStyle=PAL[ch];ctx.fillRect(x,y,1,1)}}));
-}
+function draw(){ctx.clearRect(0,0,14,14);paintGrid(ctx,STATES[cur].frames[idx],PAL)}
 function setState(s){
   cur=s;idx=0;clearInterval(timer);draw();
+  $("sceneLabel").textContent=STATES[s].label;
   timer=setInterval(()=>{idx=(idx+1)%STATES[cur].frames.length;draw()},STATES[cur].ms);
   document.querySelectorAll("#states button").forEach(b=>b.classList.toggle("on",b.dataset.s===s));
 }
-document.querySelectorAll("#states button").forEach(b=>b.onclick=()=>setState(b.dataset.s));
+// scene cycle in the hero; a manual click takes over
+const CYCLE_ORDER=["working","done","idle","attention"];
+let cyclePos=0;
+let cycler=setInterval(()=>{cyclePos=(cyclePos+1)%CYCLE_ORDER.length;setState(CYCLE_ORDER[cyclePos])},4000);
+document.querySelectorAll("#states button").forEach(b=>b.onclick=()=>{clearInterval(cycler);setState(b.dataset.s)});
 setState("working");
 
-// --- the brood: baby crab life cycle ---
+/* the brood: baby crab life cycle */
 const babyEgg=["..WWW..",".WWWWW.",".WWWWW.","..WWW..",".......","......."];
 const babyEggCracking=["..WWW..",".WWBWW.",".WBWWW.","..WWW..",".......","......."];
 const babyAlive1=["R.....R",".RRRRR.",".RBRBR.",".RRRRR.",".R.R.R.","......."];
@@ -161,9 +299,9 @@ const babyPoof1=[".W...W.","...Y...",".W...W.",".......",".......","......."];
 const babyPoof2=["W..Y..W",".......","Y.....Y","W..Y..W",".......","......."];
 const babyEmpty=[".......",".......",".......",".......",".......","......."];
 const errPoof=g=>g.map(r=>r.replaceAll("Y","R").replaceAll("W","D"));
-const CYCLE=24; // egg 2 + cracking 2 + alive 10 + elderly 5 + poof 1+1 + empty 3
+const BCYCLE=24; // egg 2 + cracking 2 + alive 10 + elderly 5 + poof 1+1 + empty 3
 function babyFrame(t,err){
-  const p=((t%CYCLE)+CYCLE)%CYCLE;
+  const p=((t%BCYCLE)+BCYCLE)%BCYCLE;
   if(p<2)return babyEgg;
   if(p<4)return babyEggCracking;
   if(p<14)return p%2?babyAlive2:babyAlive1;
@@ -172,18 +310,163 @@ function babyFrame(t,err){
   if(p<21)return err?errPoof(babyPoof2):babyPoof2;
   return babyEmpty;
 }
-const bctx=document.getElementById("brood").getContext("2d");
+const bctx=$("brood").getContext("2d");
 const babies=[{off:0,err:false},{off:9,err:true},{off:17,err:false}];
 let btick=0;
 function drawBrood(){
   bctx.clearRect(0,0,23,6);
-  babies.forEach((b,i)=>{
-    const g=babyFrame(btick+b.off,b.err),x0=i*8;
-    g.forEach((row,y)=>[...row].forEach((ch,x)=>{if(PAL[ch]){bctx.fillStyle=PAL[ch];bctx.fillRect(x0+x,y,1,1)}}));
-  });
+  babies.forEach((b,i)=>paintGrid(bctx,babyFrame(btick+b.off,b.err),PAL,i*8,0));
 }
 drawBrood();
 setInterval(()=>{btick++;drawBrood()},400);
+
+/* pixel title: CRABY */
+const LETTERS={
+  C:[".XXX.","X....","X....","X....",".XXX."],
+  R:["XXXX.","X...X","XXXX.","X..X.","X...X"],
+  A:[".XXX.","X...X","XXXXX","X...X","X...X"],
+  B:["XXXX.","X...X","XXXX.","X...X","XXXX."],
+  Y:["X...X","X...X",".XXX.","..X..","..X.."],
+};
+const tctx=$("title").getContext("2d");
+tctx.fillStyle="#e8593d";
+[..."CRABY"].forEach((ch,i)=>LETTERS[ch].forEach((row,y)=>[...row].forEach((c,x)=>{if(c==="X")tctx.fillRect(i*6+x,y,1,1)})));
+
+/* ════════ live playground ════════ */
+const CRABY="http://localhost:4923";
+let live=false;
+const pgOut=$("pgOut");
+function out(t){pgOut.textContent=t}
+function fetchTimeout(url,ms,opts){
+  const ctl=new AbortController();
+  const t=setTimeout(()=>ctl.abort(),ms);
+  return fetch(url,Object.assign({signal:ctl.signal},opts||{})).finally(()=>clearTimeout(t));
+}
+async function probe(){
+  try{
+    const r=await fetchTimeout(CRABY+"/status",1500);
+    const j=await r.json();
+    live=true;
+    document.body.classList.remove("demo-mode");
+    const b=$("pgBanner");
+    b.className="banner live";
+    b.textContent="🦀 Craby found on your machine! These buttons drive the real pet — keep an eye on the corner of your screen.";
+    out("← GET /status\n"+JSON.stringify(j,null,2));
+    document.querySelectorAll("[data-live]").forEach(x=>x.removeAttribute("title"));
+  }catch(e){
+    live=false;
+    document.body.classList.add("demo-mode");
+    const b=$("pgBanner");
+    b.className="banner demo";
+    b.innerHTML='No Craby detected — <a href="https://github.com/duperez/crab-companion">install it</a> and reload, or note that Safari may block <span class="mono">localhost</span> requests from https pages; the local playground at <a href="http://localhost:4923">localhost:4923</a> always works. <button class="copybtn" style="position:static;margin-left:8px" onclick="probe()">check again</button>';
+    document.querySelectorAll("[data-live]").forEach(x=>x.title="install Craby to drive the real pet");
+  }
+}
+async function pg(path){
+  if(!live){out("demo mode — install Craby to drive the real pet, then hit “check again”.");return}
+  out("→ GET "+path);
+  try{
+    const r=await fetchTimeout(CRABY+path,5000);
+    out("→ GET "+path+"\n← "+await r.text());
+  }catch(e){out("error: "+e+"\nDid Craby quit? Hit “check again”.")}
+}
+function sendEvent(){
+  const q=new URLSearchParams({source:val("evSource")||"ci",session:"website",state:$("evState").value,project:"website",detail:val("evDetail")});
+  pg("/event?"+q);
+}
+function pgWatch(status){
+  const q=new URLSearchParams({id:"website-demo",label:"demo from the website",status:status,source:"website"});
+  pg("/watch?"+q);
+}
+probe();
+
+/* ════════ addon builder (ported from the app playground) ════════ */
+let abData=null,abChar="C",abErase=false,abCells={};
+async function loadScenes(){
+  try{const r=await fetchTimeout(CRABY+"/scenes",1500);return await r.json()}   // live catalog if Craby is running
+  catch(e){const r=await fetch("scenes.json");return await r.json()}            // static snapshot — always works
+}
+loadScenes().then(d=>{
+  abData=d;
+  const sc=$("abScene");
+  Object.keys(d.scenes).forEach(n=>sc.add(new Option(n,n)));
+  sc.onchange=abBuild;
+  const pal=$("abPal");
+  Object.entries(d.palette).forEach(([ch,hex])=>{
+    const b=document.createElement("button");
+    b.textContent=ch;b.style.background=hex;b.title=hex;
+    b.onclick=()=>{abChar=ch;abErase=false;abSelPal(b)};
+    pal.appendChild(b);
+  });
+  const er=document.createElement("button");
+  er.textContent="eraser";er.className="eraser";
+  er.onclick=()=>{abErase=true;abSelPal(er)};
+  pal.appendChild(er);
+  abSelPal(pal.firstChild);
+  abBuild();
+}).catch(()=>{$("abGrid").textContent="could not load the scene catalog"});
+function abSelPal(btn){document.querySelectorAll("#abPal button").forEach(b=>b.classList.toggle("sel",b===btn))}
+// find the slot containing this cell (first hit wins)
+function abSlotAt(scene,x,y){
+  for(const [name,s] of Object.entries(scene.slots)){
+    if(x>=s.x&&x<s.x+s.w&&y>=s.y&&y<s.y+s.h)return[name,s];
+  }
+  return null;
+}
+function abBuild(){
+  const scene=abData.scenes[$("abScene").value];
+  abCells={}; // "slot:row:col" -> palette char
+  const grid=$("abGrid");
+  grid.innerHTML="";
+  scene.frame.forEach((row,y)=>{
+    const line=document.createElement("div");
+    row.split("").forEach((ch,x)=>{
+      const cell=document.createElement("span");
+      cell.style.background=abData.palette[ch]||"var(--bg)";
+      const hit=abSlotAt(scene,x,y);
+      if(hit){
+        const[slotName,s]=hit;
+        cell.title=slotName;
+        cell.className="slot";
+        cell.onclick=()=>{
+          const key=slotName+":"+(y-s.y)+":"+(x-s.x);
+          if(abErase){delete abCells[key];cell.style.background=abData.palette[ch]||"var(--bg)"}
+          else{abCells[key]=abChar;cell.style.background=abData.palette[abChar]}
+        };
+      }
+      line.appendChild(cell);
+    });
+    grid.appendChild(line);
+  });
+}
+function abExport(){
+  const sceneName=$("abScene").value;
+  const scene=abData.scenes[sceneName];
+  const props={};
+  for(const [slotName,s] of Object.entries(scene.slots)){
+    const rows=[];
+    let painted=false;
+    for(let y=0;y<s.h;y++){
+      let row="";
+      for(let x=0;x<s.w;x++){
+        const ch=abCells[slotName+":"+y+":"+x]||".";
+        if(ch!==".")painted=true;
+        row+=ch;
+      }
+      rows.push(row);
+    }
+    while(rows.length&&!rows[rows.length-1].replace(/\./g,""))rows.pop();
+    if(painted)props[slotName]=rows;
+  }
+  const manifest={
+    name:val("abName"),description:val("abDesc"),
+    exec:val("abExec"),source:val("abSource"),
+    interval:parseInt(val("abInterval"))||30,
+    scene:sceneName,props:props,
+  };
+  $("abOutWrap").style.display="block";
+  $("abOut").textContent=JSON.stringify(manifest,null,2);
+}
 </script>
 </body>
 </html>
