@@ -106,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var lastEventAt = Date()
     var availableUpdate: String?
     var updateTimer: Timer?
-    let appVersion = "1.6.0"
+    let appVersion = "2.0.0"
 
     // uso do plano Claude (janelas 5h/semana); vazio = sem token/indisponível
     var planWindows: [PlanWindow] = []
