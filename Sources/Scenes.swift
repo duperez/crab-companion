@@ -187,7 +187,8 @@ let sceneAtento = Scene(
     ],
     slots: [
         "garra": SceneSlot(pos: [(11, 3), (11, 4)], maxW: 3, maxH: 3),
-        "chao": SceneSlot(pos: [(4, 11), (4, 11)], maxW: 6, maxH: 3),
+        // canto inferior direito, camada da frente: cabe uma visita espiando
+        "chao": SceneSlot(pos: [(6, 9), (6, 9)], maxW: 8, maxH: 5),
         "cabeca": SceneSlot(pos: [(2, 5), (2, 5)], maxW: 10, maxH: 2),
     ])
 

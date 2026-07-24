@@ -9,7 +9,9 @@ import AppKit
 
 struct AddonManifest: Codable {
     let name: String
-    let exec: String
+    // nil = addon SÓ-FIGURINO: registra fonte e props; quem manda eventos
+    // é um app externo da família (ex.: CatLockPlus -> source "pudim")
+    var exec: String?
     var description: String?
     var source: String?          // identidade na sourcePriority (padrão: name)
     var interval: Double?        // segundos entre execuções (padrão 30, mín 5)
@@ -106,7 +108,9 @@ final class AddonManager {
             timer.invalidate()
             timers.removeValue(forKey: name)
         }
-        for addon in addons where isEnabled(addon) && timers[addon.manifest.name] == nil {
+        for addon in addons
+        where isEnabled(addon) && addon.manifest.exec != nil
+            && timers[addon.manifest.name] == nil {
             let interval = max(5, addon.manifest.interval ?? 30)
             let timer = Timer.scheduledTimer(
                 withTimeInterval: interval, repeats: true
@@ -118,7 +122,8 @@ final class AddonManager {
 
     // roda o exec do addon (uma execução: dispara eventos via API e sai)
     private func run(_ addon: LoadedAddon) {
-        let exec = addon.dir.appendingPathComponent(addon.manifest.exec)
+        guard let execName = addon.manifest.exec else { return }
+        let exec = addon.dir.appendingPathComponent(execName)
         guard FileManager.default.isExecutableFile(atPath: exec.path) else {
             NSLog("craby: addon %@ sem executável válido", addon.manifest.name)
             return
