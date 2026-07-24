@@ -12,7 +12,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 echo "==> Gerando ícone"
 TMP=$(mktemp -d)
-swiftc Sources/Sprites.swift tools/main.swift -o "$TMP/render"
+swiftc Sources/Sprites.swift Sources/Scenes.swift tools/main.swift -o "$TMP/render"
 "$TMP/render" icon "$TMP/icon.png" >/dev/null
 mkdir -p "$TMP/icon.iconset"
 for s in 16 32 128 256 512; do
