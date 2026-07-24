@@ -294,13 +294,24 @@ func isValidBabyFrame(_ frame: [String]) -> Bool {
 
 // desenha uma grade com canto superior-esquerdo em (originX, topY),
 // numa view de altura viewHeight
+// nuvenzinha de materialização dos filhotes (7x6, mesma linguagem da grande)
+let babyCloud = [
+    "..WWW..",
+    ".WLLLW.",
+    ".WWWWW.",
+    "..WWW..",
+    ".......",
+    ".......",
+]
+
 func drawGridAt(
     _ grid: [String], pixel: CGFloat, viewHeight: CGFloat,
-    originX: CGFloat, topY: CGFloat
+    originX: CGFloat, topY: CGFloat, tint: NSColor? = nil
 ) {
     for (row, line) in grid.enumerated() {
         for (col, ch) in line.enumerated() {
-            guard let color = paletteColor(ch) else { continue }
+            guard var color = paletteColor(ch) else { continue }
+            if ch == "R", let tint { color = tint }
             color.setFill()
             NSRect(
                 x: originX + CGFloat(col) * pixel,

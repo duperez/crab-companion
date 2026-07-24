@@ -63,6 +63,9 @@ struct Baby {
     var failed = false
     let session: String
     let born = Date()
+    // cada filhote nasce com uma cor própria (matiz aleatória, família viva)
+    let color = NSColor(
+        hue: .random(in: 0..<1), saturation: 0.62, brightness: 0.88, alpha: 1)
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -189,11 +192,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.window.orderOut(nil)
             self.startFastQuirk(
                 [emptyFx + cloudDense, emptyFx + cloudSparse], interval: 0.15)
+            self.petView.babyVisibleCount = 0 // filhotes chegam DEPOIS do pai
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
                 guard let self, self.floatingVisible, !self.hiddenForSharing
                 else { return }
                 self.window.orderFrontRegardless()
                 self.play(.hatch)
+                self.cascadeBabies()
             }
         }
         applyState(.idle)
@@ -359,6 +364,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    // caravana: depois do Craby se materializar, cada filhote chega na
+    // sua nuvenzinha, um a um (nuvem 0,15s -> filhote), até a fila acabar
+    func cascadeBabies() {
+        let total = min(babies.count, maxVisibleBabies)
+        guard total > 0 else {
+            petView.babyVisibleCount = nil
+            return
+        }
+        func reveal(_ i: Int) {
+            guard i < min(self.babies.count, maxVisibleBabies) else {
+                self.petView.babyVisibleCount = nil
+                self.petView.babyCloudAt = nil
+                self.petView.needsDisplay = true
+                return
+            }
+            self.petView.babyCloudAt = i
+            self.petView.needsDisplay = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                self.petView.babyCloudAt = nil
+                self.petView.babyVisibleCount = i + 1
+                self.petView.needsDisplay = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                    reveal(i + 1)
+                }
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { reveal(0) }
+    }
+
     // ------------------------------------------------------------------
     // Ninhada: ovo racha -> filhote tamborila -> bengala -> puf
     // ------------------------------------------------------------------
@@ -429,7 +463,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func renderBabies() {
-        petView.babyGrids = babies.map(babyGrid)
+        petView.babyGrids = babies.map { (babyGrid($0), $0.color) }
         petView.needsDisplay = true
     }
 
@@ -1835,7 +1869,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 final class PetView: NSView {
     var grid: [String] = []
-    var babyGrids: [[String]] = []
+    var babyGrids: [(grid: [String], color: NSColor)] = []
+    // cascata de chegada num Space novo: quantos filhotes já se materializaram
+    // (nil = todos visíveis) e qual slot está mostrando a nuvenzinha agora
+    var babyVisibleCount: Int?
+    var babyCloudAt: Int?
     var onAcknowledge: (() -> Void)?
     var onMoved: (() -> Void)?
 
@@ -1849,8 +1887,17 @@ final class PetView: NSView {
                    originX: crabOffsetX, topY: 0)
         for (i, baby) in babyGrids.prefix(maxVisibleBabies).enumerated() {
             let x = 3 + CGFloat(i) * (CGFloat(babyCols) * babyPixel + 3)
-            drawGridAt(baby, pixel: babyPixel, viewHeight: bounds.height,
-                       originX: x, topY: petAreaHeight + 3)
+            if let visible = babyVisibleCount, i >= visible {
+                // ainda não chegou: mostra a nuvenzinha no slot da vez
+                if babyCloudAt == i {
+                    drawGridAt(babyCloud, pixel: babyPixel,
+                               viewHeight: bounds.height,
+                               originX: x, topY: petAreaHeight + 3)
+                }
+                continue
+            }
+            drawGridAt(baby.grid, pixel: babyPixel, viewHeight: bounds.height,
+                       originX: x, topY: petAreaHeight + 3, tint: baby.color)
         }
     }
 
