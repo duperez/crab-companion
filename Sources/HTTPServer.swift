@@ -72,7 +72,20 @@ final class ControlServer {
         }
     }
 
+    // CORS: o site oficial pode falar com o Craby local (playground ao vivo).
+    // Só essa origem é ecoada — páginas alheias não leem respostas do pet.
+    static let allowedSiteOrigin = "https://duperez.github.io"
+    static var corsOrigins: [ObjectIdentifier: String] = [:]
+
     private func route(_ request: HTTPRequest, conn: NWConnection) {
+        if let origin = request.headers["origin"], origin == Self.allowedSiteOrigin {
+            Self.corsOrigins[ObjectIdentifier(conn)] = origin
+        }
+        // preflight (inclui Private Network Access do Chrome)
+        if request.method == "OPTIONS" {
+            Self.respond(conn, body: "", status: "204 No Content", preflight: true)
+            return
+        }
         if request.method == "POST" && request.path == "/ask" {
             if let payload = try? JSONDecoder().decode(AskPayload.self, from: request.body) {
                 onAsk(payload, conn) // conexão fica aberta; respond() é chamado depois
@@ -96,12 +109,25 @@ final class ControlServer {
         Self.respond(conn, body: reply ?? "ok")
     }
 
-    static func respond(_ conn: NWConnection, body: String, status: String = "200 OK") {
+    static func respond(
+        _ conn: NWConnection, body: String, status: String = "200 OK",
+        preflight: Bool = false
+    ) {
         let data = body.data(using: .utf8)!
         let type = body.hasPrefix("<!doctype") ? "text/html; charset=utf-8"
             : body.hasPrefix("{") ? "application/json"
             : "text/plain; charset=utf-8"
-        let response = "HTTP/1.1 \(status)\r\nContent-Type: \(type)\r\nContent-Length: \(data.count)\r\nConnection: close\r\n\r\n"
+        var head = "HTTP/1.1 \(status)\r\nContent-Type: \(type)\r\n"
+            + "Content-Length: \(data.count)\r\nConnection: close\r\n"
+        if let origin = corsOrigins.removeValue(forKey: ObjectIdentifier(conn)) {
+            head += "Access-Control-Allow-Origin: \(origin)\r\n"
+            if preflight {
+                head += "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+                    + "Access-Control-Allow-Headers: Content-Type\r\n"
+                    + "Access-Control-Allow-Private-Network: true\r\n"
+            }
+        }
+        let response = head + "\r\n"
         conn.send(content: response.data(using: .utf8)! + data,
                   completion: .contentProcessed { _ in conn.cancel() })
     }
