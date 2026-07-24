@@ -16,6 +16,8 @@ uso:
   craby input "pergunta"                texto livre no balão (imprime a resposta)
   craby answer <allow|deny|ask|opt:N|txt:...>   responde o balão atual
   craby celebrate ["texto"]             confete + toast (ex.: após git push)
+  craby event <fonte> <estado> [detalhe] [url]   evento estruturado
+  craby watch <id> <alive|dead|gone> [label] [url]   vigília
   craby quit                            encerra o app
 EOF
 }
@@ -57,6 +59,22 @@ case "$cmd" in
       txt:*) echo "${resp#txt:}" ;;
       *) echo "$resp" ;;
     esac
+    ;;
+  event)
+    [ $# -ge 2 ] || { echo "erro: craby event <fonte> <estado> [detalhe] [url]" >&2; exit 1; }
+    curl -s -m 2 --get \
+      --data-urlencode "source=$1" --data-urlencode "state=$2" \
+      --data-urlencode "session=cli-$1" --data-urlencode "project=$(basename "$PWD")" \
+      --data-urlencode "detail=${3:-}" --data-urlencode "url=${4:-}" \
+      "$S/event" && echo
+    ;;
+  watch)
+    [ $# -ge 2 ] || { echo "erro: craby watch <id> <alive|dead|gone> [label] [url]" >&2; exit 1; }
+    curl -s -m 2 --get \
+      --data-urlencode "id=$1" --data-urlencode "status=$2" \
+      --data-urlencode "label=${3:-$1}" --data-urlencode "url=${4:-}" \
+      --data-urlencode "source=cli" \
+      "$S/watch" && echo
     ;;
   celebrate)
     curl -s -m 2 --get --data-urlencode "text=${1:-}" "$S/celebrate" && echo

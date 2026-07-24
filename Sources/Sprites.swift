@@ -140,56 +140,31 @@ let deitadoV2 = [
     "..r..r..r..r..",
 ]
 
-let clawsUp = [
-    ".RR........RR.",
-    ".RR........RR.",
-    "..R........R..",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    ".R.R..RR..R.R.",
-    "R..R..RR..R..R",
-]
-
-let clawsDown = [
+// nuvem mágica: o Craby se materializa ao chegar num novo Space
+let cloudDense = [
     "..............",
-    "RRR........RRR",
-    ".R..........R.",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    "R..R..RR..R..R",
-    ".R.R..RR..R.R.",
+    "....WWWWWW....",
+    "..WWLLLLLLWW..",
+    ".WLLWWWWWWLLW.",
+    ".WLWWWWWWWWLW.",
+    "..WWLLLLLLWW..",
+    "....WWWWWW....",
+    "..............",
+    "..............",
+    "..............",
 ]
 
-let leftUpRightDown = [
-    ".RR...........",
-    ".RR........RRR",
-    "..R........R..",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    ".R.R..RR..R.R.",
-    "R..R..RR..R..R",
-]
-
-let rightUpLeftDown = [
-    "...........RR.",
-    "RRR........RR.",
-    ".R.........R..",
-    "..RRRRRRRRRR..",
-    ".RRWBRRRRWBRR.",
-    ".RRRRRRRRRRRR.",
-    ".RDRRRRRRRRDR.",
-    "..RRRRRRRRRR..",
-    "R..R..RR..R..R",
-    ".R.R..RR..R.R.",
+let cloudSparse = [
+    "..............",
+    "..W.....W.....",
+    ".....W.....W..",
+    "..W....W......",
+    "......W....W..",
+    "...W......W...",
+    "..............",
+    "..............",
+    "..............",
+    "..............",
 ]
 
 // dormindo: "Zzz" flutuando (dois quadros, o Z sobe)
@@ -319,13 +294,24 @@ func isValidBabyFrame(_ frame: [String]) -> Bool {
 
 // desenha uma grade com canto superior-esquerdo em (originX, topY),
 // numa view de altura viewHeight
+// nuvenzinha de materialização dos filhotes (7x6, mesma linguagem da grande)
+let babyCloud = [
+    "..WWW..",
+    ".WLLLW.",
+    ".WWWWW.",
+    "..WWW..",
+    ".......",
+    ".......",
+]
+
 func drawGridAt(
     _ grid: [String], pixel: CGFloat, viewHeight: CGFloat,
-    originX: CGFloat, topY: CGFloat
+    originX: CGFloat, topY: CGFloat, tint: NSColor? = nil
 ) {
     for (row, line) in grid.enumerated() {
         for (col, ch) in line.enumerated() {
-            guard let color = paletteColor(ch) else { continue }
+            guard var color = paletteColor(ch) else { continue }
+            if ch == "R", let tint { color = tint }
             color.setFill()
             NSRect(
                 x: originX + CGFloat(col) * pixel,

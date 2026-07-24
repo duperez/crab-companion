@@ -63,6 +63,9 @@ struct Baby {
     var failed = false
     let session: String
     let born = Date()
+    // cada filhote nasce com uma cor própria (matiz aleatória, família viva)
+    let color = NSColor(
+        hue: .random(in: 0..<1), saturation: 0.62, brightness: 0.88, alpha: 1)
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -103,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var lastEventAt = Date()
     var availableUpdate: String?
     var updateTimer: Timer?
-    let appVersion = "1.6.0"
+    let appVersion = "2.0.0"
 
     // uso do plano Claude (janelas 5h/semana); vazio = sem token/indisponível
     var planWindows: [PlanWindow] = []
@@ -152,9 +155,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         window.backgroundColor = .clear
         window.hasShadow = false
         window.level = .floating
-        // canJoinAllSpaces: existe em todos os desktops virtuais
-        // fullScreenAuxiliary: aparece também sobre apps em tela cheia
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        // moveToActiveSpace: o pet mora num Space só e se TELETRANSPORTA na
+        // troca — durante o swipe ele desliza embora com a tela antiga, e na
+        // nova se materializa da nuvem (ver activeSpaceDidChange)
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = false
 
         petView = PetView(frame: NSRect(x: 0, y: 0, width: width, height: height))
@@ -174,6 +178,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         setupStatusItem()
         addonManager.scan()
+
+        // troca de Space: o macOS esconde a janela durante o gesto (sem
+        // aviso prévio) — na chegada, o Craby se materializa da nuvenzinha
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self, self.floatingVisible, !self.hiddenForSharing
+            else { return }
+            // some da tela nova ANTES de qualquer quadro do caranguejo vazar,
+            // e volta já vestido de nuvem
+            self.window.orderOut(nil)
+            self.startFastQuirk(
+                [emptyFx + cloudDense, emptyFx + cloudSparse], interval: 0.15)
+            self.petView.babyVisibleCount = 0 // filhotes chegam DEPOIS do pai
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                guard let self, self.floatingVisible, !self.hiddenForSharing
+                else { return }
+                self.window.orderFrontRegardless()
+                self.play(.hatch)
+                self.cascadeBabies()
+            }
+        }
         applyState(.idle)
 
         // reavalia sessões periodicamente (comemoração expira, sessões mortas somem)
@@ -337,6 +364,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    // caravana: depois do Craby se materializar, cada filhote chega na
+    // sua nuvenzinha, um a um (nuvem 0,15s -> filhote), até a fila acabar
+    func cascadeBabies() {
+        let total = min(babies.count, maxVisibleBabies)
+        guard total > 0 else {
+            petView.babyVisibleCount = nil
+            return
+        }
+        func reveal(_ i: Int) {
+            guard i < min(self.babies.count, maxVisibleBabies) else {
+                self.petView.babyVisibleCount = nil
+                self.petView.babyCloudAt = nil
+                self.petView.needsDisplay = true
+                return
+            }
+            self.petView.babyCloudAt = i
+            self.petView.needsDisplay = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                self.petView.babyCloudAt = nil
+                self.petView.babyVisibleCount = i + 1
+                self.petView.needsDisplay = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                    reveal(i + 1)
+                }
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { reveal(0) }
+    }
+
     // ------------------------------------------------------------------
     // Ninhada: ovo racha -> filhote tamborila -> bengala -> puf
     // ------------------------------------------------------------------
@@ -407,7 +463,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func renderBabies() {
-        petView.babyGrids = babies.map(babyGrid)
+        petView.babyGrids = babies.map { (babyGrid($0), $0.color) }
         petView.needsDisplay = true
     }
 
@@ -1300,6 +1356,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // Personalidade: manias do ócio e comemoração de level-up
     // ------------------------------------------------------------------
 
+    // quirk em ritmo próprio (ex.: nuvem de chegada, que não pode atrasar
+    // o trabalho): timer dedicado, e ao terminar devolve o compasso do estado
+    func startFastQuirk(_ frames: [[String]], interval: TimeInterval) {
+        quirk = frames
+        quirkIndex = 0
+        animTimer?.invalidate()
+        animTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) {
+            [weak self] _ in
+            guard let self else { return }
+            self.quirkIndex += 1
+            if self.quirkIndex >= self.quirk.count {
+                self.quirk = []
+                self.quirkIndex = 0
+                self.applyState(self.state) // restaura o timer normal
+                return
+            }
+            self.render()
+        }
+        render()
+    }
+
     func startQuirk(_ frames: [[String]]) {
         quirk = frames
         quirkIndex = 0
@@ -1792,7 +1869,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 final class PetView: NSView {
     var grid: [String] = []
-    var babyGrids: [[String]] = []
+    var babyGrids: [(grid: [String], color: NSColor)] = []
+    // cascata de chegada num Space novo: quantos filhotes já se materializaram
+    // (nil = todos visíveis) e qual slot está mostrando a nuvenzinha agora
+    var babyVisibleCount: Int?
+    var babyCloudAt: Int?
     var onAcknowledge: (() -> Void)?
     var onMoved: (() -> Void)?
 
@@ -1806,8 +1887,17 @@ final class PetView: NSView {
                    originX: crabOffsetX, topY: 0)
         for (i, baby) in babyGrids.prefix(maxVisibleBabies).enumerated() {
             let x = 3 + CGFloat(i) * (CGFloat(babyCols) * babyPixel + 3)
-            drawGridAt(baby, pixel: babyPixel, viewHeight: bounds.height,
-                       originX: x, topY: petAreaHeight + 3)
+            if let visible = babyVisibleCount, i >= visible {
+                // ainda não chegou: mostra a nuvenzinha no slot da vez
+                if babyCloudAt == i {
+                    drawGridAt(babyCloud, pixel: babyPixel,
+                               viewHeight: bounds.height,
+                               originX: x, topY: petAreaHeight + 3)
+                }
+                continue
+            }
+            drawGridAt(baby.grid, pixel: babyPixel, viewHeight: bounds.height,
+                       originX: x, topY: petAreaHeight + 3, tint: baby.color)
         }
     }
 
